@@ -1,0 +1,170 @@
+# Startet den Server und macht ihn über ngrok von außen erreichbar.
+#
+# Damit lässt sich der MVP vom Handy aus benutzen, ohne dass irgendwo ein
+# Rechner läuft: Workflow starten, Adresse aus der Zusammenfassung nehmen,
+# in der App oder der Webseite eintragen.
+#
+# ────────────────────────────────────────────────────────────────────────────
+# EINMALIG EINRICHTEN
+#
+#   Settings → Secrets and variables → Actions → New repository secret
+#     Name:  NGROK_AUTHTOKEN
+#     Wert:  der Token aus dem ngrok-Dashboard
+#
+#   Optional, wenn eine feste Adresse vorhanden ist:
+#     Variable (nicht Secret):  NGROK_DOMAIN
+#     Wert:  sneeze-till-paternity.ngrok-free.dev      (ohne https://)
+#
+# Der Token steht bewusst nirgends in diesem Repository. Ein Token in einer
+# Datei ist ein Token in der Versionsgeschichte — auch nach dem Löschen.
+# ────────────────────────────────────────────────────────────────────────────
+#
+# GRENZEN, die man vorher wissen sollte:
+#
+#   • Der Lauf hält höchstens `minuten` durch und hört dann auf. Ein Workflow
+#     ist kein Hoster. Für den Dauerbetrieb braucht es eine echte Maschine.
+#   • Beim Ende ist alles weg, was in der Zwischenzeit angelegt wurde. Der
+#     Datenbestand lebt in der Datei des Runners.
+#   • Ohne feste Adresse gibt es bei jedem Start eine neue.
+name: Server über ngrok
+
+on:
+  workflow_dispatch:
+    inputs:
+      minuten:
+        description: 'Wie lange der Server laufen soll (max. 330)'
+        required: false
+        default: '60'
+      frisch:
+        description: 'Mit frischen Beispieldaten starten'
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Nachsehen, ob der Token hinterlegt ist
+        env:
+          TOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo '::error::Das Secret NGROK_AUTHTOKEN fehlt.'
+            echo 'Settings → Secrets and variables → Actions → New repository secret' >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: Server starten
+        run: |
+          ${{ inputs.frisch && 'rm -f data/db.json' || '' }}
+          node src/index.js > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4000/api/health > /dev/null; then
+              echo 'Server läuft.'
+              exit 0
+            fi
+            sleep 1
+          done
+          echo '::error::Der Server ist nicht hochgekommen.'
+          cat server.log
+          exit 1
+
+      - name: ngrok einrichten
+        env:
+          NGROK_AUTHTOKEN: ${{ secrets.NGROK_AUTHTOKEN }}
+        run: |
+          curl -sSL https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz \
+            | tar xz -C /usr/local/bin ngrok
+          ngrok config add-authtoken "$NGROK_AUTHTOKEN"
+
+      - name: Tunnel aufmachen
+        env:
+          DOMAIN: ${{ vars.NGROK_DOMAIN }}
+        run: |
+          if [ -n "$DOMAIN" ]; then
+            ngrok http 4000 --domain "$DOMAIN" --log stdout > ngrok.log 2>&1 &
+          else
+            ngrok http 4000 --log stdout > ngrok.log 2>&1 &
+          fi
+
+          # Die Adresse steht in der lokalen Verwaltungsschnittstelle von ngrok.
+          for i in $(seq 1 30); do
+            ADRESSE=$(curl -s http://localhost:4040/api/tunnels \
+              | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).tunnels[0].public_url)}catch{}})")
+            [ -n "$ADRESSE" ] && break
+            sleep 2
+          done
+
+          if [ -z "$ADRESSE" ]; then
+            echo '::error::Der Tunnel ist nicht aufgegangen.'
+            cat ngrok.log
+            exit 1
+          fi
+
+          echo "ADRESSE=$ADRESSE" >> "$GITHUB_ENV"
+
+      - name: Prüfen, dass die Adresse wirklich antwortet
+        run: |
+          # Der Warnhinweis von ngrok-free lässt sich mit diesem Kopf überspringen.
+          ANTWORT=$(curl -s -H 'ngrok-skip-browser-warning: 1' "$ADRESSE/api/health")
+          echo "$ANTWORT"
+          echo "$ANTWORT" | grep -q '"ok"' || {
+            echo '::error::Die Adresse antwortet nicht wie erwartet.'
+            exit 1
+          }
+
+      - name: Adresse aufschreiben
+        run: |
+          {
+            echo '## Der Server läuft'
+            echo
+            echo "**$ADRESSE**"
+            echo
+            echo 'In der Webseite eintragen (Actions → „Webseite veröffentlichen" → Feld `api`)'
+            echo 'oder beim APK-Bau (Actions → „APK bauen" → Feld `api`).'
+            echo
+            echo '### Zugänge'
+            echo
+            echo '| Rolle | Anmeldung | Passwort |'
+            echo '|---|---|---|'
+            echo '| Verwaltung | `topic` | `admin` |'
+            echo '| Gastro | `test@gastro.de` | `12345aA?` |'
+            echo '| Nutzer | `test@user.de` | `12345aA?` |'
+            echo
+            echo "Der Lauf endet nach ${{ inputs.minuten || '60' }} Minuten. Danach ist die Adresse tot"
+            echo 'und alles, was in der Zwischenzeit angelegt wurde, weg.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Laufen lassen
+        run: |
+          MINUTEN=${{ inputs.minuten || '60' }}
+          [ "$MINUTEN" -gt 330 ] && MINUTEN=330
+          echo "Läuft für $MINUTEN Minuten unter $ADRESSE"
+          END=$(( $(date +%s) + MINUTEN * 60 ))
+          while [ "$(date +%s)" -lt "$END" ]; do
+            if ! curl -sf http://localhost:4000/api/health > /dev/null; then
+              echo '::error::Der Server ist weggebrochen.'
+              tail -50 server.log
+              exit 1
+            fi
+            sleep 60
+          done
+          echo 'Zeit um.'
+
+      - name: Protokolle mitgeben
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: protokolle
+          path: |
+            server.log
+            ngrok.log
+          if-no-files-found: ignore
