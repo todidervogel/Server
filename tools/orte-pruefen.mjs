@@ -24,6 +24,16 @@ const kuerzel = betriebe.map((b) => b.slug)
 pruefe('Kürzel sind eindeutig', new Set(kuerzel).size === kuerzel.length,
   `${kuerzel.length - new Set(kuerzel).size} doppelt`)
 
+/*
+ * Die wichtigere Prüfung. Die Kürzel waren eindeutig, während 55 Betriebe
+ * doppelt in der Liste standen: Der Import hängte dem zweiten Eintrag einfach
+ * einen Ortsnamen an. Die OSM-Nummer lässt sich nicht so umbenennen.
+ */
+const kennungen = betriebe.map((b) => b.osmId)
+const doppelteKennungen = kennungen.length - new Set(kennungen).size
+pruefe('Jeder Betrieb kommt nur einmal vor', doppelteKennungen === 0,
+  `${doppelteKennungen} doppelt — die Umkreise überlappen sich`)
+
 /* Koordinaten müssen im Umkreis liegen — sonst stimmt die Abfrage nicht. */
 const R = 6371
 const entfernung = (a, b) => {
@@ -45,6 +55,24 @@ const zuWeit = betriebe.filter((b) => {
 })
 pruefe('Alle liegen im bestellten Umkreis', zuWeit.length === 0,
   zuWeit.slice(0, 3).map((b) => b.name).join(', '))
+
+/*
+ * Derselbe Betrieb darf nicht zweimal drin sein. OpenStreetMap führt größere
+ * Lokale oft als Punkt und als Gebäudefläche — gleicher Name, ein paar Meter
+ * auseinander. Verschiedene Gasthöfe „Hirsch" in verschiedenen Dörfern sind
+ * dagegen in Ordnung, deshalb zählt Name **und** Nähe.
+ */
+const doppelte = []
+for (let i = 0; i < betriebe.length; i += 1) {
+  for (let j = i + 1; j < betriebe.length; j += 1) {
+    if (betriebe[i].name === betriebe[j].name
+      && entfernung(betriebe[i], betriebe[j]) * 1000 < 150) {
+      doppelte.push(betriebe[i].name)
+    }
+  }
+}
+pruefe('Kein Betrieb doppelt', doppelte.length === 0,
+  [...new Set(doppelte)].slice(0, 3).join(', '))
 
 const ohneAngebot = betriebe.filter((b) => !Array.isArray(b.serving) || !b.serving.length)
 pruefe('Jeder hat eine Angebotszeile', ohneAngebot.length === 0, `${ohneAngebot.length} ohne`)

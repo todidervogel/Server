@@ -222,6 +222,40 @@ const kuerzel = (text) =>
 
 const PREIS = { restaurant: '€€', bar: '€€', cafe: '€', imbiss: '€', baeckerei: '€', sonstiges: '€' }
 
+/* Luftlinie in Kilometern — dieselbe Formel wie in der Fachlogik. */
+function entfernungKm(a, b) {
+  const rad = (g) => (g * Math.PI) / 180
+  const dLat = rad(b.lat - a.lat)
+  const dLng = rad(b.lng - a.lng)
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+  return 2 * 6371 * Math.asin(Math.sqrt(h))
+}
+
+/**
+ * Denselben Betrieb nicht zweimal.
+ *
+ * OpenStreetMap führt größere Lokale oft doppelt: einmal als Punkt und einmal
+ * als Gebäudefläche. Beide haben denselben Namen und liegen ein paar Meter
+ * auseinander. In der Liste sieht das aus wie ein Fehler — und wäre auch
+ * einer, wenn jemand beide bewertet.
+ *
+ * Verschiedene Gasthöfe „Hirsch" in verschiedenen Dörfern bleiben erhalten:
+ * Es zählt Name **und** Nähe.
+ */
+function ohneDoppelte(betriebe, meter = 150) {
+  const behalten = []
+  for (const betrieb of betriebe) {
+    const schonDa = behalten.find(
+      (b) => b.name === betrieb.name && entfernungKm(b, betrieb) * 1000 < meter,
+    )
+    /* Der mit der Adresse gewinnt — meist die Gebäudefläche. */
+    if (!schonDa) behalten.push(betrieb)
+    else if (!schonDa.address && betrieb.address) Object.assign(schonDa, betrieb)
+  }
+  return behalten
+}
+
 const kategorieName = (k) => ({
   restaurant: 'Restaurant', cafe: 'Café', imbiss: 'Imbiss',
   bar: 'Bar', baeckerei: 'Bäckerei', sonstiges: 'Sonstiges',
@@ -237,6 +271,20 @@ function umbauen(element, gegend, vergeben) {
   const kategorie = KATEGORIE[tags.amenity] ?? KATEGORIE[tags.shop] ?? 'sonstiges'
   const kuechenListe = kuechen(tags)
 
+  /*
+   * Dieselbe OSM-Nummer nur einmal. Die Umkreise von Rheinmünster und
+   * Oberkirch überlappen sich — Baden-Baden liegt in beiden —, und ohne diese
+   * Sperre stand jeder Betrieb dazwischen zweimal in der Liste.
+   *
+   * Vorher fiel das nicht auf, weil die Kürzelprüfung dem zweiten Eintrag
+   * einfach einen anderen Namenszusatz gab: Die Kürzel waren eindeutig, die
+   * Betriebe aber dieselben. Eine Prüfung, die ein Problem umbenennt statt es
+   * zu melden, ist schlimmer als keine.
+   */
+  const osmId = `${element.type}/${element.id}`
+  if (gesehen.has(osmId)) return null
+  gesehen.add(osmId)
+
   let slug = kuerzel(tags.name)
   if (!slug) return null
   if (vergeben.has(slug)) slug = `${slug}-${kuerzel(tags['addr:city'] ?? gegend.key)}`.slice(0, 70)
@@ -247,7 +295,7 @@ function umbauen(element, gegend, vergeben) {
     id: `osm-${element.type[0]}${element.id}`,
     slug,
     name: tags.name,
-    osmId: `${element.type}/${element.id}`,
+    osmId,
     cuisine: kuechenListe[0] ?? kategorieName(kategorie),
     tags: kuechenListe.length ? kuechenListe : [kategorieName(kategorie)],
     price: PREIS[kategorie],
@@ -275,6 +323,7 @@ function umbauen(element, gegend, vergeben) {
 /* --- Lauf ----------------------------------------------------------------- */
 
 const vergeben = new Set()
+const gesehen = new Set()
 const alle = []
 const bericht = []
 const gescheitert = []
@@ -316,8 +365,12 @@ for (const gegend of GEGENDEN) {
   const betriebe = elemente
     .map((e) => umbauen(e, gegend, vergeben))
     .filter(Boolean)
-    /* Mit Adresse zuerst — die sind für einen Test brauchbarer. */
-    .sort((a, b) => (b.address ? 1 : 0) - (a.address ? 1 : 0))
+    /*
+     * Nach Entfernung zur Ortsmitte. Wer die App in Oberkirch ausprobiert,
+     * soll Oberkirch sehen und nicht, was der Zufall in 28 km Entfernung
+     * übrig gelassen hat.
+     */
+    .sort((a, b) => entfernungKm(gegend, a) - entfernungKm(gegend, b))
     .slice(0, MAX)
 
   console.log(`  ${betriebe.length} übernommen`)
@@ -342,7 +395,8 @@ if (uebernommen.length) {
   }
 }
 
-const zusammen = [...alle, ...uebernommen]
+/* Zum Schluss noch über alle Gegenden hinweg: gleicher Name, wenige Meter. */
+const zusammen = ohneDoppelte([...alle, ...uebernommen])
 
 if (!zusammen.length) {
   console.error('\nNichts geholt und nichts vorhanden — es bleibt beim alten Stand.')

@@ -65,7 +65,36 @@ export function createApiServer({ store, seedData, log = console.log }) {
 
     'GET /api/routes': () => ({ status: 200, body: { routes: listRoutes() } }),
 
-    'GET /api/places': () => ({ status: 200, body: { result: domain.places.list({}) } }),
+    /*
+     * Zum Nachsehen mit curl oder im Browser. Nimmt dieselben Angaben wie der
+     * Aufruf über /api/rpc:
+     *
+     *   /api/places?lat=48.53&lng=8.08&radiusKm=10&q=pizza
+     *
+     * Vorher wurden die Parameter stillschweigend verworfen — die Adresse gab
+     * immer alles zurück, und eine Prüfung „liegen die neuen Orte da, wo sie
+     * hingehören?" ging damit ins Leere.
+     */
+    'GET /api/places': (req, url) => {
+      const zahl = (name) => {
+        const roh = url.searchParams.get(name)
+        return roh === null || roh === '' ? undefined : Number(roh)
+      }
+      const lat = zahl('lat')
+      const lng = zahl('lng')
+      const position = Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined
+
+      return {
+        status: 200,
+        body: {
+          result: domain.places.list({
+            position,
+            radiusKm: zahl('radiusKm'),
+            query: url.searchParams.get('q') ?? undefined,
+          }),
+        },
+      }
+    },
 
     'POST /api/auth/login': (req, url, body) => {
       const result = domain.auth.login(body.identifier, body.password)
