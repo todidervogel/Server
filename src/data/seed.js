@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 /**
  * Ausgangsdatenbestand.
  *
@@ -25,6 +26,24 @@ export const ALLERGEN_KEYS = [
 export const HOME_POSITION = { lat: 52.5390, lng: 13.4116, label: 'Prenzlauer Berg, Berlin' }
 
 const hm = (h, m = 0) => h * 60 + m
+
+/*
+ * Echte Betriebe aus OpenStreetMap, geholt von `tools/osm-import.mjs`.
+ *
+ * Die Datei liegt im Repository, damit ein frischer Start ohne Netz auskommt.
+ * Fehlt sie, bleibt es bei den erfundenen Berliner Betrieben — die haben als
+ * Einzige Videos, Bewertungen und Speisekarten und zeigen deshalb, wie die
+ * Anwendung mit Inhalt aussieht.
+ */
+function echteOrte() {
+  try {
+    const datei = new URL('./orte.json', import.meta.url)
+    const roh = readFileSync(datei, 'utf8')
+    return JSON.parse(roh).betriebe ?? []
+  } catch {
+    return []
+  }
+}
 
 /* ==========================================================================
    Nutzer
@@ -77,6 +96,34 @@ export const users = [
     password: 'Admin1234', role: 'admin', private: true, joined: '2026-01-02',
     bio: '', status: 'active', reportCount: 0, notify: {},
   },
+
+  /*
+   * Ausdrücklich bestellte Zugänge zum Ausprobieren. `findByLogin` nimmt
+   * Benutzernamen genauso wie E-Mail-Adressen — deshalb genügt bei `topic`
+   * der Name allein.
+   *
+   * ACHTUNG: `admin` ist kein Passwort, sondern ein Platzhalter. Es steht in
+   * jeder Wortliste, die es gibt. Bevor irgendetwas davon echte Nutzerdaten
+   * sieht, muss dieser Zugang weg — siehe SCHRITT-2-DEV-ENTFERNEN.md im Brain.
+   */
+  {
+    id: 'a2', username: 'topic', name: 'Topic (Verwaltung)', email: 'topic@intern',
+    password: 'admin', role: 'admin', private: true, joined: '2026-09-07',
+    bio: '', status: 'active', reportCount: 0, notify: {},
+  },
+  {
+    id: 'g3', username: 'test-gastro', name: 'Test-Gastro', email: 'test@gastro.de',
+    password: '12345aA?', role: 'gastro', placeId: 'p3',
+    private: false, joined: '2026-09-07', bio: '', status: 'active', reportCount: 0,
+    notify: { reviews: true, videos: true, moderation: true },
+  },
+  {
+    id: 'u4', username: 'test-user', name: 'Test-Nutzer', email: 'test@user.de',
+    password: '12345aA?', role: 'user',
+    private: false, joined: '2026-09-07', status: 'active', reportCount: 0,
+    bio: 'Konto zum Ausprobieren.',
+    notify: { likes: true, comments: true, follows: true, moderation: true },
+  },
 ]
 
 /* ==========================================================================
@@ -127,7 +174,7 @@ export const places = [
     lat: 52.5250, lng: 13.4900,
     address: 'Herzbergstr. 128', zip: '10365', city: 'Berlin',
     phone: '+49 30 5556677', website: '',
-    claimStatus: 'verified', claimedBy: null, status: 'active', hasCover: true,
+    claimStatus: 'verified', claimedBy: 'g3', status: 'active', hasCover: true,
     description: 'Pho, Bun Bo und Sommerrollen. Bar bezahlen, schnell essen, glücklich sein.',
     features: ['abholung', 'lieferung', 'vegetarisch'],
     hours: H.imbiss, menuNote: '',
@@ -368,12 +415,17 @@ export const locations = [
   { id: 'l3', name: 'Kastanienallee', detail: 'Straße · 10435 Berlin', lat: 52.5385, lng: 13.4098 },
   { id: 'l4', name: 'Friedrichshain', detail: 'Stadtteil · Berlin', lat: 52.5150, lng: 13.4540 },
   { id: 'l5', name: 'Neukölln', detail: 'Stadtteil · Berlin', lat: 52.4810, lng: 13.4350 },
+
+  /* Die drei Gegenden mit echten Betrieben aus OpenStreetMap. */
+  { id: 'l6', name: 'Alcossebre', detail: 'Spanien · Costa del Azahar', lat: 40.2408, lng: 0.2706 },
+  { id: 'l7', name: 'Rheinmünster', detail: 'Deutschland · 77836', lat: 48.7686, lng: 8.0511 },
+  { id: 'l8', name: 'Oberkirch', detail: 'Deutschland · 77704', lat: 48.5333, lng: 8.0833 },
 ]
 
 /** Alles zusammen — so sieht die Datenbank beim ersten Start aus. */
 export function initialDatabase() {
   return {
-    users, places, menuCategories, dishes, videos, reviews,
+    users, places: [...places, ...echteOrte()], menuCategories, dishes, videos, reviews,
     follows, likes, saves, notifications, reports, invites, suggestions, auditLog,
     locations, searchPopular,
     seenVideos: [],
