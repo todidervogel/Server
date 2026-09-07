@@ -34,26 +34,26 @@ export function list(filters = {}) {
   const data = db()
   const all = data.places
     .filter((p) => p.status !== 'archived')
-    .map((p) => decoratePlace(p, { position: filters.position, data }))
+    .map((p) => decoratePlace(p, { position: filters.position, data, viewerId: filters.viewerId }))
   return sortPlaces(applyFilters(all, filters), filters.sort)
 }
 
-export function bySlug(slug, position) {
+export function bySlug(slug, position, viewerId) {
   const data = db()
   const place = data.places.find((p) => p.slug === slug)
-  return place ? decoratePlace(place, { position, data }) : null
+  return place ? decoratePlace(place, { position, data, viewerId }) : null
 }
 
-export function byId(id, position) {
+export function byId(id, position, viewerId) {
   const data = db()
   const place = data.places.find((p) => p.id === id)
-  return place ? decoratePlace(place, { position, data }) : null
+  return place ? decoratePlace(place, { position, data, viewerId }) : null
 }
 
 /** Nächstgelegene Betriebe — für die Betriebswahl beim Hochladen (E.3). */
-export function nearby(position, limit = 8) {
+export function nearby(position, limit = 8, viewerId) {
   const data = db()
-  const all = data.places.map((p) => decoratePlace(p, { position, data }))
+  const all = data.places.map((p) => decoratePlace(p, { position, data, viewerId }))
   return sortPlaces(all, 'distance').slice(0, limit)
 }
 

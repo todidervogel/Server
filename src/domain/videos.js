@@ -10,14 +10,15 @@ const today = () => new Date().toISOString().slice(0, 10)
  * Aktualität, vorhandener Bewertung und Ortsprüfung. Gesehenes rutscht ans
  * Ende, eine kleine Zufallskomponente verhindert Stillstand.
  */
-export function feed({ position, radiusKm = 5, userId, seed = 1 } = {}) {
+export function feed({ position, radiusKm = 5, userId, seed = 1, viewerId } = {}) {
+  const viewer = viewerId ?? userId ?? null
   const data = db()
   const seen = new Set(data.seenVideos ?? [])
 
   const scored = data.videos
     .filter((v) => v.status === 'published')
     .filter((v) => v.visibility === 'public' || v.authorId === userId)
-    .map((v) => decorateVideo(v, { position, data }))
+    .map((v) => decorateVideo(v, { position, data, viewerId: viewer }))
     .filter((v) => v.place && (v.place.distanceKm ?? 0) <= radiusKm)
     .map((v) => {
       const age = (Date.now() - new Date(v.createdAt).getTime()) / 86400000
@@ -35,26 +36,26 @@ export function feed({ position, radiusKm = 5, userId, seed = 1 } = {}) {
   return { items: scored, widened: scored.length < 5 && radiusKm < 50, radiusKm }
 }
 
-export function byId(id, position) {
+export function byId(id, position, viewerId) {
   const data = db()
   const video = data.videos.find((v) => v.id === id)
-  return video ? decorateVideo(video, { position, data }) : null
+  return video ? decorateVideo(video, { position, data, viewerId }) : null
 }
 
-export function byPlace(placeId, { includeAll = false } = {}) {
+export function byPlace(placeId, { includeAll = false, viewerId } = {}) {
   const data = db()
   return data.videos
     .filter((v) => v.placeId === placeId)
     .filter((v) => includeAll || (v.status === 'published' && v.visibility === 'public'))
-    .map((v) => decorateVideo(v, { data }))
+    .map((v) => decorateVideo(v, { data, viewerId }))
 }
 
-export function byAuthor(authorId, { own = false } = {}) {
+export function byAuthor(authorId, { own = false, viewerId } = {}) {
   const data = db()
   return data.videos
     .filter((v) => v.authorId === authorId)
     .filter((v) => own || (v.status === 'published' && v.visibility === 'public'))
-    .map((v) => decorateVideo(v, { data }))
+    .map((v) => decorateVideo(v, { data, viewerId }))
 }
 
 /** Warteschlange der Freigabe (G.3). */

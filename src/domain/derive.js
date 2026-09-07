@@ -39,12 +39,21 @@ export function dishRatingOf(dishId, data = db()) {
   return { rating: avg(marks), ratingCount: marks.length }
 }
 
-/** Was von einem Konto öffentlich sichtbar ist — nie das Passwort. */
-export function publicUser(user, data = db()) {
+/**
+ * Was von einem Konto öffentlich sichtbar ist — nie das Passwort.
+ *
+ * `viewerId` ist, wer gerade zusieht. Ob diese Person schon folgt, reist mit
+ * den Daten mit: Sonst müsste die Oberfläche für jede Zeile einzeln nachfragen,
+ * und über das Netz ginge das gar nicht synchron.
+ */
+export function publicUser(user, data = db(), viewerId = null) {
   if (!user) return null
   const { password, ...rest } = user
   return {
     ...rest,
+    viewerFollow: viewerId
+      ? (data.follows.find((f) => f.followerId === viewerId && f.followingId === user.id)?.status ?? 'none')
+      : 'none',
     videoCount: data.videos.filter((v) => v.authorId === user.id && v.status === 'published').length,
     reviewCount: data.reviews.filter((r) => r.authorId === user.id).length,
     followerCount: data.follows.filter((f) => f.followingId === user.id && f.status === 'accepted').length,
@@ -53,7 +62,7 @@ export function publicUser(user, data = db()) {
 }
 
 /** Hängt an einen Betrieb alles, was sich aus anderen Tabellen ergibt. */
-export function decoratePlace(place, { position, data = db(), now } = {}) {
+export function decoratePlace(place, { position, data = db(), now, viewerId = null } = {}) {
   const km = position ? distanceKm(position, place) : null
   const published = data.videos.filter(
     (v) => v.placeId === place.id && v.status === 'published' && v.visibility === 'public',
@@ -65,27 +74,34 @@ export function decoratePlace(place, { position, data = db(), now } = {}) {
     videoCount: published.length,
     ...openLabel(place.hours, now),
     verified: place.claimStatus === 'verified',
+    viewerSaved: viewerId
+      ? data.saves.some((s) => s.userId === viewerId && s.type === 'place' && s.targetId === place.id)
+      : false,
   }
 }
 
-export function decorateVideo(video, { position, data = db(), now } = {}) {
+export function decorateVideo(video, { position, data = db(), now, viewerId = null } = {}) {
   const place = data.places.find((p) => p.id === video.placeId)
   const author = data.users.find((u) => u.id === video.authorId)
   return {
     ...video,
-    place: place ? decoratePlace(place, { position, data, now }) : null,
-    author: author ? publicUser(author, data) : null,
+    place: place ? decoratePlace(place, { position, data, now, viewerId }) : null,
+    author: author ? publicUser(author, data, viewerId) : null,
     review: data.reviews.find((r) => r.videoId === video.id) ?? null,
     likeCount: data.likes.filter((l) => l.videoId === video.id).length,
+    viewerLiked: viewerId ? data.likes.some((l) => l.userId === viewerId && l.videoId === video.id) : false,
+    viewerSaved: viewerId
+      ? data.saves.some((s) => s.userId === viewerId && s.type === 'video' && s.targetId === video.id)
+      : false,
   }
 }
 
-export function decorateReview(review, data = db()) {
+export function decorateReview(review, data = db(), viewerId = null) {
   const author = data.users.find((u) => u.id === review.authorId)
   const place = data.places.find((p) => p.id === review.placeId)
   return {
     ...review,
-    author: author ? publicUser(author, data) : null,
+    author: author ? publicUser(author, data, viewerId) : null,
     placeName: place?.name,
     placeSlug: place?.slug,
     rating: { food: review.ratingFood, service: review.ratingService, price: review.ratingPrice },

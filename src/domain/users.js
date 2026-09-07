@@ -4,16 +4,16 @@ import * as admin from './admin.js'
 
 const nowIso = () => new Date().toISOString().slice(0, 19)
 
-export function byUsername(username) {
+export function byUsername(username, viewerId) {
   const data = db()
   const user = data.users.find((u) => u.username === username)
-  return user ? publicUser(user, data) : null
+  return user ? publicUser(user, data, viewerId) : null
 }
 
-export function byId(id) {
+export function byId(id, viewerId) {
   const data = db()
   const user = data.users.find((u) => u.id === id)
-  return user ? publicUser(user, data) : null
+  return user ? publicUser(user, data, viewerId) : null
 }
 
 /** Nur Felder, die jemand an sich selbst ändern darf. */

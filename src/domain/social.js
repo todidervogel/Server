@@ -28,9 +28,9 @@ export function saved(userId, type) {
   const data = db()
   const ids = data.saves.filter((s) => s.userId === userId && s.type === type).map((s) => s.targetId)
   if (type === 'place') {
-    return data.places.filter((p) => ids.includes(p.id)).map((p) => decoratePlace(p, { data }))
+    return data.places.filter((p) => ids.includes(p.id)).map((p) => decoratePlace(p, { data, viewerId: userId }))
   }
-  return data.videos.filter((v) => ids.includes(v.id)).map((v) => decorateVideo(v, { data }))
+  return data.videos.filter((v) => ids.includes(v.id)).map((v) => decorateVideo(v, { data, viewerId: userId }))
 }
 
 export function followState(userId, targetId) {

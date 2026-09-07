@@ -8,17 +8,17 @@ const star = (value) => {
   return Number.isFinite(n) && n >= 1 && n <= 5 ? Math.round(n) : null
 }
 
-export function byPlace(placeId, { filter = 'all' } = {}) {
+export function byPlace(placeId, { filter = 'all', viewerId } = {}) {
   const data = db()
   let list = data.reviews.filter((r) => r.placeId === placeId)
   if (filter === 'withVideo') list = list.filter((r) => r.videoId)
   if (filter === 'verified') list = list.filter((r) => r.verifiedOnSite)
-  return list.map((r) => decorateReview(r, data))
+  return list.map((r) => decorateReview(r, data, viewerId))
 }
 
-export function byAuthor(authorId) {
+export function byAuthor(authorId, viewerId) {
   const data = db()
-  return data.reviews.filter((r) => r.authorId === authorId).map((r) => decorateReview(r, data))
+  return data.reviews.filter((r) => r.authorId === authorId).map((r) => decorateReview(r, data, viewerId))
 }
 
 export function create(input) {

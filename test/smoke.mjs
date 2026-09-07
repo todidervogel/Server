@@ -134,6 +134,22 @@ const reported = (await rpc('places.byId', ['p4'])).body.result
 check('Drei Meldungen setzen den Betrieb auf gemeldet-geschlossen', reported.status === 'closed_reported',
   `status=${reported.status}`)
 
+/* --- Der Zustand der Betrachterin reist mit ------------------------------ */
+const feedAnonym = await rpc('videos.feed', [{ position: { lat: 52.539, lng: 13.4116 }, radiusKm: 5 }])
+check('Ohne Anmeldung ist nichts gemerkt',
+  feedAnonym.body.result.items.every((v) => v.viewerLiked === false && v.viewerSaved === false))
+
+/* Ein Video nehmen, das noch niemand von uns gemerkt hat. */
+const feedVorher = await rpc('videos.feed', [{ position: { lat: 52.539, lng: 13.4116 }, radiusKm: 5 }], userToken)
+const frisch = feedVorher.body.result.items.find((v) => !v.viewerLiked)
+await rpc('social.toggleLike', [null, frisch.id], userToken)
+const feedAngemeldet = await rpc('videos.feed', [{ position: { lat: 52.539, lng: 13.4116 }, radiusKm: 5 }], userToken)
+check('Angemeldet steht „Gefällt mir" an den Daten',
+  feedAngemeldet.body.result.items.find((v) => v.id === frisch.id)?.viewerLiked === true)
+
+const fremdesProfil = await rpc('users.byUsername', ['jonas.isst'], userToken)
+check('Folgen-Zustand reist am Profil mit', ['none', 'pending', 'accepted'].includes(fremdesProfil.body.result.viewerFollow))
+
 /* --- Datenschutz --------------------------------------------------------- */
 const exportData = await rpc('users.exportData', [], userToken)
 check('Datenexport enthält alle Bereiche',

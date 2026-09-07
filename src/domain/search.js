@@ -2,7 +2,7 @@ import { db, update } from './store.js'
 import { decoratePlace, dishRatingOf, publicUser } from './derive.js'
 
 /** Vier Reiter über einer Abfrage (Konzept 8.8). */
-export function run(query, { position } = {}) {
+export function run(query, { position, viewerId } = {}) {
   const data = db()
   const q = String(query ?? '').trim().toLowerCase()
   if (!q) return { dishes: [], places: [], locations: [], profiles: [] }
@@ -11,14 +11,14 @@ export function run(query, { position } = {}) {
     .filter((d) => `${d.name} ${d.description}`.toLowerCase().includes(q))
     .map((d) => {
       const place = data.places.find((p) => p.id === d.placeId)
-      return { ...d, ...dishRatingOf(d.id, data), place: place ? decoratePlace(place, { position, data }) : null }
+      return { ...d, ...dishRatingOf(d.id, data), place: place ? decoratePlace(place, { position, data, viewerId }) : null }
     })
     .filter((d) => d.place)
     .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
 
   const matchedPlaces = data.places
     .filter((p) => `${p.name} ${p.cuisine} ${p.tags.join(' ')} ${p.address} ${p.city}`.toLowerCase().includes(q))
-    .map((p) => decoratePlace(p, { position, data }))
+    .map((p) => decoratePlace(p, { position, data, viewerId }))
     .sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9))
 
   const locations = (data.locations ?? []).filter((l) => `${l.name} ${l.detail}`.toLowerCase().includes(q))
@@ -26,7 +26,7 @@ export function run(query, { position } = {}) {
   const profiles = data.users
     .filter((u) => u.role === 'user' && u.status !== 'banned')
     .filter((u) => `${u.username} ${u.name}`.toLowerCase().includes(q))
-    .map((u) => publicUser(u, data))
+    .map((u) => publicUser(u, data, viewerId))
 
   return { dishes, places: matchedPlaces, locations, profiles }
 }

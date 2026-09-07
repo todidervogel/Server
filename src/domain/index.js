@@ -20,6 +20,7 @@ export * as search from './search.js'
 export * as gastro from './gastro.js'
 
 export { setStore, getStore, createMemoryStore } from './store.js'
+export { invoke, listCalls, hasCall } from './calls.js'
 export * from './derive.js'
 export * from './geo.js'
 export * from './hours.js'
