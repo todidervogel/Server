@@ -1,0 +1,14 @@
+{
+  "name": "tellerrand-server",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Fachlogik und HTTP-API — ohne Fremdabhängigkeiten",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node test/smoke.mjs",
+    "reset": "node -e \"require('node:fs').rmSync('data/db.json',{force:true});console.log('Daten zurückgesetzt.')\""
+  }
+}
