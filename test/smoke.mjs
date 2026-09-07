@@ -47,9 +47,18 @@ const health = await api('/api/health')
 check('Server antwortet', health.status === 200 && health.body.ok)
 check('Aufrufliste ist gefüllt', health.body.aufrufe > 50, `nur ${health.body.aufrufe}`)
 
+/*
+ * Keine feste Zahl mehr. Seit dem OSM-Import hängt die Menge davon ab, was
+ * zuletzt geholt wurde — ein Test, der auf 10 besteht, würde bei jedem
+ * Datenlauf rot, ohne dass etwas kaputt wäre. Geprüft wird, was wirklich
+ * zählt: Die Adresse antwortet, und die Betriebe mit Inhalt sind dabei.
+ */
 const places = await api('/api/places')
-check('Betriebe ohne Anmeldung lesbar', places.status === 200 && places.body.result.length === 10,
+check('Betriebe ohne Anmeldung lesbar',
+  places.status === 200 && places.body.result?.length >= 10,
   `${places.body.result?.length} Betriebe`)
+check('Die Betriebe mit Videos und Speisekarte sind dabei',
+  places.body.result?.some((p) => p.slug === 'trattoria-bella'))
 
 const menu = await api('/api/g/trattoria-bella/speisekarte')
 check('Speisekarte über die Adresse abrufbar', menu.status === 200 && menu.body.menu.length === 5,

@@ -271,19 +271,7 @@ function umbauen(element, gegend, vergeben) {
   const kategorie = KATEGORIE[tags.amenity] ?? KATEGORIE[tags.shop] ?? 'sonstiges'
   const kuechenListe = kuechen(tags)
 
-  /*
-   * Dieselbe OSM-Nummer nur einmal. Die Umkreise von Rheinmünster und
-   * Oberkirch überlappen sich — Baden-Baden liegt in beiden —, und ohne diese
-   * Sperre stand jeder Betrieb dazwischen zweimal in der Liste.
-   *
-   * Vorher fiel das nicht auf, weil die Kürzelprüfung dem zweiten Eintrag
-   * einfach einen anderen Namenszusatz gab: Die Kürzel waren eindeutig, die
-   * Betriebe aber dieselben. Eine Prüfung, die ein Problem umbenennt statt es
-   * zu melden, ist schlimmer als keine.
-   */
   const osmId = `${element.type}/${element.id}`
-  if (gesehen.has(osmId)) return null
-  gesehen.add(osmId)
 
   let slug = kuerzel(tags.name)
   if (!slug) return null
@@ -323,7 +311,6 @@ function umbauen(element, gegend, vergeben) {
 /* --- Lauf ----------------------------------------------------------------- */
 
 const vergeben = new Set()
-const gesehen = new Set()
 const alle = []
 const bericht = []
 const gescheitert = []
@@ -362,21 +349,46 @@ for (const gegend of GEGENDEN) {
   }
   console.log(`  ${elemente.length} Treffer von Overpass`)
 
-  const betriebe = elemente
+  const kandidaten = elemente
     .map((e) => umbauen(e, gegend, vergeben))
     .filter(Boolean)
-    /*
-     * Nach Entfernung zur Ortsmitte. Wer die App in Oberkirch ausprobiert,
-     * soll Oberkirch sehen und nicht, was der Zufall in 28 km Entfernung
-     * übrig gelassen hat.
-     */
-    .sort((a, b) => entfernungKm(gegend, a) - entfernungKm(gegend, b))
-    .slice(0, MAX)
+    .map((b) => ({ ...b, _abstand: entfernungKm(gegend, b) }))
 
-  console.log(`  ${betriebe.length} übernommen`)
-  bericht.push({ gegend: gegend.name, umkreis: gegend.km, anzahl: betriebe.length })
-  alle.push(...betriebe)
+  console.log(`  ${kandidaten.length} verwertbar`)
+  alle.push(...kandidaten)
 }
+
+/*
+ * Betriebe, die in zwei Umkreisen liegen, gehören zu der Gegend, deren Mitte
+ * näher ist. Baden-Baden liegt zwischen Rheinmünster und Oberkirch — ohne
+ * diese Regel bekäme es die Gegend, die zufällig zuerst abgefragt wurde.
+ *
+ * Wichtig ist, dass das **nach** dem Sammeln passiert und **vor** dem
+ * Abschneiden. Beim ersten Versuch beanspruchte jede Gegend beim Einlesen
+ * sofort jede Nummer, die sie sah — auch die, die sie hinterher gar nicht
+ * behielt. Rheinmünster hat damit ganz Oberkirch leergeräumt: Dort blieben
+ * null Betriebe im 5-km-Umkreis übrig.
+ */
+const nachKennung = new Map()
+for (const betrieb of alle) {
+  const bisher = nachKennung.get(betrieb.osmId)
+  if (!bisher || betrieb._abstand < bisher._abstand) nachKennung.set(betrieb.osmId, betrieb)
+}
+
+/* Jetzt je Gegend die nächstgelegenen behalten. */
+const ausgewaehlt = []
+for (const gegend of GEGENDEN) {
+  const ihre = [...nachKennung.values()]
+    .filter((b) => b.region === gegend.key)
+    .sort((a, b) => a._abstand - b._abstand)
+    .slice(0, MAX)
+  if (!ihre.length) continue
+  console.log(`${gegend.name}: ${ihre.length} übernommen`)
+  bericht.push({ gegend: gegend.name, umkreis: gegend.km, anzahl: ihre.length })
+  ausgewaehlt.push(...ihre.map(({ _abstand, ...rest }) => rest))
+}
+alle.length = 0
+alle.push(...ausgewaehlt)
 
 /*
  * Was diesmal nicht kam, wird aus dem letzten Stand übernommen. Sonst würde
