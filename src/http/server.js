@@ -104,8 +104,20 @@ export function createApiServer({ store, seedData, log = console.log }) {
     'POST /api/rpc': (req, url, body) =>
       callRpc({ method: body.method, args: body.args ?? [], token: bearer(req) }),
 
-    /* Nur im Testbetrieb: alles auf den Auslieferungsstand zurück. */
-    'POST /api/reset': () => {
+    /*
+     * Alles auf den Auslieferungsstand zurück — nur für Angemeldete mit
+     * Verwaltungsrechten.
+     *
+     * Vorher ging das ohne jeden Nachweis. Solange der Server nur auf dem
+     * eigenen Rechner lief, war das bequem; hinter einem ngrok-Link ist es
+     * ein offener Knopf zum Löschen aller Daten, den jeder findet, der die
+     * Adresse kennt.
+     */
+    'POST /api/reset': (req) => {
+      const userId = tokens.userIdFor(bearer(req))
+      if (domain.auth.accountOf(userId)?.role !== 'admin') {
+        return { status: 403, body: { error: 'Nur für die Verwaltung' } }
+      }
       if (!store.reset) return { status: 404, body: { error: 'Nicht verfügbar' } }
       store.reset()
       return { status: 200, body: { ok: true } }
