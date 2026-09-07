@@ -14,7 +14,7 @@
  * Läuft nicht in jeder Umgebung: Wo der Netzzugang Overpass nicht durchlässt,
  * übernimmt der Workflow „Testdaten holen" diese Arbeit auf einem Runner.
  */
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const args = process.argv.slice(2)
@@ -277,6 +277,15 @@ function umbauen(element, gegend, vergeben) {
 const vergeben = new Set()
 const alle = []
 const bericht = []
+const gescheitert = []
+
+/* Was schon im Repository liegt — daraus werden fehlende Gegenden ergänzt. */
+let vorhanden = { betriebe: [], gegenden: [] }
+try {
+  vorhanden = JSON.parse(readFileSync(resolve('src/data/orte.json'), 'utf8'))
+} catch {
+  /* Beim ersten Lauf gibt es die Datei noch nicht. */
+}
 
 let erste = true
 for (const gegend of GEGENDEN) {
@@ -288,7 +297,20 @@ for (const gegend of GEGENDEN) {
   erste = false
 
   console.log(`\n${gegend.name} (${gegend.km} km)…`)
-  const elemente = await hole(gegend)
+
+  /*
+   * Eine Gegend, die nicht durchkommt, darf die anderen nicht mitreißen.
+   * Overpass ist mal erreichbar und mal nicht; zwei von drei Gegenden sind
+   * besser als keine, und der nächste Lauf holt die fehlende nach.
+   */
+  let elemente
+  try {
+    elemente = await hole(gegend)
+  } catch (fehler) {
+    console.warn(`  ${gegend.name} aufgegeben: ${fehler.message}`)
+    gescheitert.push(gegend.name)
+    continue
+  }
   console.log(`  ${elemente.length} Treffer von Overpass`)
 
   const betriebe = elemente
@@ -303,13 +325,40 @@ for (const gegend of GEGENDEN) {
   alle.push(...betriebe)
 }
 
+/*
+ * Was diesmal nicht kam, wird aus dem letzten Stand übernommen. Sonst würde
+ * ein halb geglückter Lauf die Daten der vorigen Gegenden löschen — schlimmer
+ * als gar nicht zu laufen.
+ */
+const geholteGegenden = new Set(bericht.map((b) => b.gegend))
+const uebernommen = (vorhanden.betriebe ?? []).filter((b) => {
+  const gegend = GEGENDEN.find((g) => g.key === b.region)
+  return gegend && !geholteGegenden.has(gegend.name)
+})
+if (uebernommen.length) {
+  console.log(`\n${uebernommen.length} Betriebe aus dem letzten Stand übernommen.`)
+  for (const alt of vorhanden.gegenden ?? []) {
+    if (!geholteGegenden.has(alt.gegend)) bericht.push({ ...alt, uebernommen: true })
+  }
+}
+
+const zusammen = [...alle, ...uebernommen]
+
+if (!zusammen.length) {
+  console.error('\nNichts geholt und nichts vorhanden — es bleibt beim alten Stand.')
+  process.exit(1)
+}
+
 const ziel = resolve('src/data/orte.json')
 writeFileSync(ziel, `${JSON.stringify({
   quelle: 'OpenStreetMap-Mitwirkende, ODbL',
   geholt: new Date().toISOString().slice(0, 10),
   gegenden: bericht,
-  betriebe: alle,
+  betriebe: zusammen,
 }, null, 2)}\n`)
 
-console.log(`\n${alle.length} Betriebe in ${ziel}`)
-bericht.forEach((b) => console.log(`  ${b.gegend}: ${b.anzahl}`))
+console.log(`\n${zusammen.length} Betriebe in ${ziel}`)
+bericht.forEach((b) => console.log(`  ${b.gegend}: ${b.anzahl}${b.uebernommen ? ' (aus dem letzten Stand)' : ''}`))
+if (gescheitert.length) {
+  console.log(`\nNicht erreicht: ${gescheitert.join(', ')} — noch einmal starten, wenn Overpass Luft hat.`)
+}
