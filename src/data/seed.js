@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs'
+import { betriebe as betriebeAusOsm } from './orte.js'
+
 /**
  * Ausgangsdatenbestand.
  *
@@ -30,20 +31,14 @@ const hm = (h, m = 0) => h * 60 + m
 /*
  * Echte Betriebe aus OpenStreetMap, geholt von `tools/osm-import.mjs`.
  *
- * Die Datei liegt im Repository, damit ein frischer Start ohne Netz auskommt.
- * Fehlt sie, bleibt es bei den erfundenen Berliner Betrieben — die haben als
- * Einzige Videos, Bewertungen und Speisekarten und zeigen deshalb, wie die
- * Anwendung mit Inhalt aussieht.
+ * Als Modul eingebunden, nicht als Datei gelesen: Dieselbe Fachlogik läuft im
+ * Browser, und dort gibt es kein Dateisystem.
+ *
+ * Die erfundenen Berliner Betriebe bleiben daneben stehen — sie sind die
+ * Einzigen mit Videos, Bewertungen und Speisekarten und zeigen deshalb, wie
+ * die Anwendung mit Inhalt aussieht.
  */
-function echteOrte() {
-  try {
-    const datei = new URL('./orte.json', import.meta.url)
-    const roh = readFileSync(datei, 'utf8')
-    return JSON.parse(roh).betriebe ?? []
-  } catch {
-    return []
-  }
-}
+const echteOrte = () => betriebeAusOsm
 
 /* ==========================================================================
    Nutzer

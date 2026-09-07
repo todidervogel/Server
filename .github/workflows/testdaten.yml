@@ -1,7 +1,7 @@
 # Holt echte Betriebe aus OpenStreetMap und legt sie ins Repository.
 #
 # Starten: Repository → Actions → "Testdaten holen" → "Run workflow".
-# Danach liegen die Betriebe in src/data/orte.json und sind beim nächsten
+# Danach liegen die Betriebe in src/data/orte.js und sind beim nächsten
 # Start des Servers da.
 #
 # Warum ein Workflow und kein Skript, das man von Hand startet: Es gibt keinen
@@ -57,13 +57,13 @@ jobs:
           # Erst vormerken, dann vergleichen. `git diff` allein sieht eine Datei
           # nicht, die es vorher noch gar nicht gab — beim ersten Lauf wurden
           # die Daten deshalb geholt, geprüft und weggeworfen.
-          git add src/data/orte.json
+          git add src/data/orte.js
           if git diff --cached --quiet; then
             echo 'Nichts Neues.'
             exit 0
           fi
 
-          anzahl=$(node -e "console.log(JSON.parse(require('fs').readFileSync('src/data/orte.json','utf8')).betriebe.length)")
+          anzahl=$(node -e "console.log(JSON.parse(require('fs').readFileSync('src/data/orte.js','utf8')).betriebe.length)")
           git commit -m "Testdaten aus OpenStreetMap: ${anzahl} Betriebe
 
           Geholt von tools/osm-import.mjs. Quelle: OpenStreetMap-Mitwirkende, ODbL."

@@ -4,9 +4,7 @@
  * Ein Import, der stillschweigend Unsinn liefert, ist schlimmer als einer, der
  * abbricht: Der Unsinn landet im Repository und fällt erst auf der Karte auf.
  */
-import { readFileSync } from 'node:fs'
-
-const daten = JSON.parse(readFileSync('src/data/orte.json', 'utf8'))
+const daten = await import('../src/data/orte.js')
 const betriebe = daten.betriebe ?? []
 
 const ergebnisse = []

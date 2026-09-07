@@ -14,7 +14,7 @@
  * Läuft nicht in jeder Umgebung: Wo der Netzzugang Overpass nicht durchlässt,
  * übernimmt der Workflow „Testdaten holen" diese Arbeit auf einem Runner.
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const args = process.argv.slice(2)
@@ -318,7 +318,7 @@ const gescheitert = []
 /* Was schon im Repository liegt — daraus werden fehlende Gegenden ergänzt. */
 let vorhanden = { betriebe: [], gegenden: [] }
 try {
-  vorhanden = JSON.parse(readFileSync(resolve('src/data/orte.json'), 'utf8'))
+  vorhanden = await import(new URL('../src/data/orte.js', import.meta.url).href)
 } catch {
   /* Beim ersten Lauf gibt es die Datei noch nicht. */
 }
@@ -415,13 +415,25 @@ if (!zusammen.length) {
   process.exit(1)
 }
 
-const ziel = resolve('src/data/orte.json')
-writeFileSync(ziel, `${JSON.stringify({
-  quelle: 'OpenStreetMap-Mitwirkende, ODbL',
-  geholt: new Date().toISOString().slice(0, 10),
-  gegenden: bericht,
-  betriebe: zusammen,
-}, null, 2)}\n`)
+/*
+ * Als Modul, nicht als JSON.
+ *
+ * Dieselbe Fachlogik läuft auf dem Server **und** im Browser. Eine JSON-Datei
+ * müsste dort mit `node:fs` gelesen werden — das gibt es im Browser nicht, und
+ * der Bau der Website brach daran ab. Ein Modul importieren beide gleich.
+ */
+const ziel = resolve('src/data/orte.js')
+writeFileSync(ziel, `/**
+ * Echte Betriebe aus OpenStreetMap — erzeugt von tools/osm-import.mjs.
+ *
+ * NICHT VON HAND ÄNDERN. Der nächste Import überschreibt die Datei.
+ * Quelle: OpenStreetMap-Mitwirkende, ODbL.
+ */
+export const geholt = ${JSON.stringify(new Date().toISOString().slice(0, 10))}
+export const quelle = 'OpenStreetMap-Mitwirkende, ODbL'
+export const gegenden = ${JSON.stringify(bericht, null, 2)}
+export const betriebe = ${JSON.stringify(zusammen, null, 2)}
+`)
 
 console.log(`\n${zusammen.length} Betriebe in ${ziel}`)
 bericht.forEach((b) => console.log(`  ${b.gegend}: ${b.anzahl}${b.uebernommen ? ' (aus dem letzten Stand)' : ''}`))
