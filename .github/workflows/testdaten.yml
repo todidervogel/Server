@@ -53,13 +53,19 @@ jobs:
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          if git diff --quiet -- src/data/orte.json; then
+
+          # Erst vormerken, dann vergleichen. `git diff` allein sieht eine Datei
+          # nicht, die es vorher noch gar nicht gab — beim ersten Lauf wurden
+          # die Daten deshalb geholt, geprüft und weggeworfen.
+          git add src/data/orte.json
+          if git diff --cached --quiet; then
             echo 'Nichts Neues.'
             exit 0
           fi
+
           anzahl=$(node -e "console.log(JSON.parse(require('fs').readFileSync('src/data/orte.json','utf8')).betriebe.length)")
-          git add src/data/orte.json
           git commit -m "Testdaten aus OpenStreetMap: ${anzahl} Betriebe
 
           Geholt von tools/osm-import.mjs. Quelle: OpenStreetMap-Mitwirkende, ODbL."
           git push
+          echo "${anzahl} Betriebe eingecheckt." >> "$GITHUB_STEP_SUMMARY"
