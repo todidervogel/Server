@@ -27,9 +27,12 @@ const GEGENDEN = [
   { key: 'oberkirch', name: 'Oberkirch', land: 'DE', lat: 48.5333, lng: 8.0833, km: 30 },
 ]
 
+/* Mehrere Spiegel: Ist einer überlastet, übernimmt der nächste. */
 const SPIEGEL = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+  'https://overpass-api.openstreetmap.fr/api/interpreter',
 ]
 
 const MAX = Number(flag('--max') ?? 120)
@@ -37,31 +40,76 @@ const nurGegend = flag('--gegend')
 
 /* --- Overpass ------------------------------------------------------------- */
 
+/*
+ * Die Reihenfolge in der Ausgabezeile ist nicht beliebig: Erst wie
+ * ausführlich (`tags`), dann welche Geometrie (`center`). Andersherum
+ * antwortet Overpass mit „406 Not Acceptable“ — was wie ein Problem mit den
+ * Kopfzeilen aussieht, aber ein Syntaxfehler ist.
+ */
 const abfrage = ({ lat, lng, km }) => `
-[out:json][timeout:90];
+[out:json][timeout:180];
 (
   nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"](around:${km * 1000},${lat},${lng});
   nwr["shop"~"^(bakery|butcher|deli)$"](around:${km * 1000},${lat},${lng});
 );
-out center tags;`
+out tags center;`
 
-async function hole(gegend) {
+/*
+ * Overpass erwartet, dass man sich zu erkennen gibt, und weist Anfragen ohne
+ * eigene Kennung ab. Node schickt von sich aus gar keine.
+ */
+const KENNUNG = 'tellerrand-mvp/1.0 (Testdaten-Import; https://github.com/todidervogel/Server)'
+
+const warte = (ms) => new Promise((fertig) => setTimeout(fertig, ms))
+
+/**
+ * Holt eine Gegend — mit Geduld.
+ *
+ * Overpass ist ein Dienst, den Freiwillige bezahlen. Er sagt regelmäßig „zu
+ * viele Anfragen“, besonders von GitHub-Runnern, deren Adressen sich viele
+ * teilen. Ein einziger Versuch je Spiegel reicht deshalb nicht: Es wird
+ * reihum probiert, mit wachsender Pause dazwischen.
+ */
+async function hole(gegend, { versuche = 4 } = {}) {
   let letzterFehler
-  for (const url of SPIEGEL) {
-    try {
-      const antwort = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ data: abfrage(gegend) }),
-      })
-      if (!antwort.ok) throw new Error(`${antwort.status} ${antwort.statusText}`)
-      const json = await antwort.json()
-      return json.elements ?? []
-    } catch (fehler) {
-      letzterFehler = fehler
-      console.warn(`  ${url} ging nicht: ${fehler.message}`)
+
+  for (let runde = 0; runde < versuche; runde += 1) {
+    for (const url of SPIEGEL) {
+      try {
+        const antwort = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/x-www-form-urlencoded',
+            accept: 'application/json',
+            'user-agent': KENNUNG,
+          },
+          body: new URLSearchParams({ data: abfrage(gegend) }),
+        })
+
+        if (antwort.status === 429 || antwort.status === 504) {
+          throw new Error(`${antwort.status} — überlastet`)
+        }
+        if (!antwort.ok) {
+          /* Bei 400 verrät Overpass im Text, was an der Abfrage nicht stimmt. */
+          const text = (await antwort.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+          throw new Error(`${antwort.status} ${antwort.statusText}${text ? ` — ${text.slice(0, 200)}` : ''}`)
+        }
+
+        const json = await antwort.json()
+        return json.elements ?? []
+      } catch (fehler) {
+        letzterFehler = fehler
+        console.warn(`  ${new URL(url).host}: ${fehler.message}`)
+      }
+    }
+
+    if (runde < versuche - 1) {
+      const pause = 15 * 2 ** runde
+      console.log(`  … ${pause} Sekunden warten und noch einmal versuchen`)
+      await warte(pause * 1000)
     }
   }
+
   throw letzterFehler
 }
 
@@ -222,8 +270,15 @@ const vergeben = new Set()
 const alle = []
 const bericht = []
 
+let erste = true
 for (const gegend of GEGENDEN) {
   if (nurGegend && nurGegend !== gegend.key) continue
+
+  /* Zwischen zwei schweren Abfragen kurz Luft lassen — so steht es in der
+     Nutzungsordnung von Overpass. */
+  if (!erste) await warte(8000)
+  erste = false
+
   console.log(`\n${gegend.name} (${gegend.km} km)…`)
   const elemente = await hole(gegend)
   console.log(`  ${elemente.length} Treffer von Overpass`)

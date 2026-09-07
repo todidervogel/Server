@@ -29,6 +29,10 @@ permissions:
 jobs:
   holen:
     runs-on: ubuntu-latest
+    # Overpass ist ein Dienst von Freiwilligen und sagt oft „zu viele
+    # Anfragen". Das Skript wartet dann und versucht es erneut — dafür
+    # braucht der Lauf Luft.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
