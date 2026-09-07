@@ -47,7 +47,7 @@ const nurGegend = flag('--gegend')
  * Kopfzeilen aussieht, aber ein Syntaxfehler ist.
  */
 const abfrage = ({ lat, lng, km }) => `
-[out:json][timeout:180];
+[out:json][timeout:90];
 (
   nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"](around:${km * 1000},${lat},${lng});
   nwr["shop"~"^(bakery|butcher|deli)$"](around:${km * 1000},${lat},${lng});
@@ -84,6 +84,14 @@ async function hole(gegend, { versuche = 4 } = {}) {
             'user-agent': KENNUNG,
           },
           body: new URLSearchParams({ data: abfrage(gegend) }),
+          /*
+           * Ohne Zeitlimit wartet `fetch` ewig. Ein Spiegel, der die
+           * Verbindung annimmt und dann nichts mehr sagt, hält damit den
+           * ganzen Lauf an — beim zweiten Versuch stand der Ablauf 25 Minuten
+           * im selben Schritt, bis ich ihn abgebrochen habe. Overpass selbst
+           * bekommt 90 Sekunden; nach 120 ist hier Schluss.
+           */
+          signal: AbortSignal.timeout(120_000),
         })
 
         if (antwort.status === 429 || antwort.status === 504) {
