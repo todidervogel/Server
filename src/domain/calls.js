@@ -12,7 +12,7 @@ import * as search from './search.js'
 import * as gastro from './gastro.js'
 
 /**
- * Die Aufrufliste — was es gibt und wer es darf.
+ * Die Aufrufliste, was es gibt und wer es darf.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/rpc.js          der Server hinter der Anmeldung mit Token      │
@@ -21,7 +21,7 @@ import * as gastro from './gastro.js'
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Es gibt keinen freien Zugriff auf die Fachlogik: Jeder Aufruf muss hier
- * stehen, und zu jedem gehört eine Regel. Diese Datei benutzen beide Wirte —
+ * stehen, und zu jedem gehört eine Regel. Diese Datei benutzen beide Wirte,
  * der Server hinter der Anmeldung mit Token, die Website im Alleinbetrieb mit
  * der lokalen Sitzung. Dadurch verhalten sich beide gleich, und die Regeln
  * stehen nur einmal irgendwo.
@@ -49,7 +49,7 @@ const CALLS = {
   /*
    * Verifizierung im MVP: Es gibt noch keinen Mail- und keinen SMS-Versand,
    * deshalb darf sie übersprungen werden. Beides läuft trotzdem über die
-   * Rechteprüfung — wer nicht angemeldet ist, kann an keinem Konto etwas
+   * Rechteprüfung, wer nicht angemeldet ist, kann an keinem Konto etwas
    * setzen, auch nicht am eigenen, das es noch nicht gibt.
    */
   'auth.skipVerification': { who: 'user', call: (ctx) => auth.skipVerification(ctx.account.id) },
@@ -60,7 +60,7 @@ const CALLS = {
   'places.bySlug': { who: 'public', call: (ctx, [slug, position]) => places.bySlug(slug, position, viewerOf(ctx)) },
   'places.byId': { who: 'public', call: (ctx, [id, position]) => places.byId(id, position, viewerOf(ctx)) },
   'places.nearby': { who: 'public', call: (ctx, [position, limit]) => places.nearby(position, limit, viewerOf(ctx)) },
-  /* Marker für die Karte — schlank, ohne abgeleitete Werte. */
+  /* Marker für die Karte, schlank, ohne abgeleitete Werte. */
   'places.inBounds': { who: 'public', call: (ctx, [bounds, limit]) => places.inBounds(bounds ?? {}, limit) },
   'places.save': {
     who: 'gastro',
@@ -210,7 +210,7 @@ const CALLS = {
   'admin.auditLog': { who: 'admin', call: () => admin.auditLog() },
   'admin.setClaimStatus': { who: 'admin', call: (ctx, [id, status]) => places.setClaimStatus(id, status) },
 
-  /* Wer einen Betrieb übernehmen will, meldet sich — ohne Konto. */
+  /* Wer einen Betrieb übernehmen will, meldet sich, ohne Konto. */
   'admin.suggestPlace': { who: 'public', call: (ctx, [data]) => admin.createSuggestion(data ?? {}) },
   'admin.requestClaim': {
     who: 'public',
@@ -256,7 +256,7 @@ export function listCalls() {
 export const hasCall = (method) => Object.hasOwn(CALLS, method)
 
 /**
- * Führt einen Aufruf aus. Gibt immer `{ status, body }` zurück — auch im
+ * Führt einen Aufruf aus. Gibt immer `{ status, body }` zurück, auch im
  * Fehlerfall, damit beide Wirte dasselbe weiterreichen können.
  */
 export function invoke(method, args = [], account = null) {

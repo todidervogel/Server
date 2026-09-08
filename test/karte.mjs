@@ -12,7 +12,7 @@ import { initialDatabase } from '../src/data/seed.js'
  * ┌─ Was geprüft wird ───────────────────────────────────────────────────────┐
  * │  src/http/karte.js        Stil, Kacheln, Zwischenspeicher                │
  * │  src/http/kachelbild.js   der Ersatz, wenn keine Kachel zu bekommen ist  │
- * │  src/domain/places.js     inBounds — was im Ausschnitt liegt             │
+ * │  src/domain/places.js     inBounds, was im Ausschnitt liegt              │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Der Kachelanbieter wird hier **nicht** angesprochen. In dieser Umgebung ist
@@ -112,6 +112,6 @@ server.close()
 rmSync(ordner, { recursive: true, force: true })
 
 const daneben = ergebnisse.filter(([ok]) => !ok)
-ergebnisse.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? ` — ${detail}` : ''}`))
+ergebnisse.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? `, ${detail}` : ''}`))
 console.log(`\n${ergebnisse.length - daneben.length} von ${ergebnisse.length} bestanden.`)
 if (daneben.length) process.exitCode = 1

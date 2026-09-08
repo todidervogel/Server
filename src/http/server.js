@@ -6,7 +6,7 @@ import { kachel, stil } from './karte.js'
 import { titelbild } from '../domain/titelbild.js'
 
 /**
- * Der HTTP-Server. Ohne Fremdabhängigkeiten — `npm install` lädt nichts nach,
+ * Der HTTP-Server. Ohne Fremdabhängigkeiten, `npm install` lädt nichts nach,
  * `node src/index.js` genügt.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
@@ -34,7 +34,7 @@ const bild = (res, inhalt, { herkunft } = {}) => {
     'content-length': inhalt.length,
     /*
      * Der Browser darf die Kachel einen Tag behalten. Ohne das holt jedes
-     * Verschieben der Karte dieselben Bilder erneut — über Mobilfunk ist das
+     * Verschieben der Karte dieselben Bilder erneut, über Mobilfunk ist das
      * der Unterschied zwischen flüssig und zäh.
      */
     'cache-control': 'public, max-age=86400',
@@ -43,13 +43,13 @@ const bild = (res, inhalt, { herkunft } = {}) => {
   res.end(inhalt)
 }
 
-/** Antwortet mit einem SVG — die erzeugten Titelbilder. */
+/** Antwortet mit einem SVG, die erzeugten Titelbilder. */
 const svg = (res, inhalt) => {
   const puffer = Buffer.from(inhalt, 'utf8')
   res.writeHead(200, {
     'content-type': 'image/svg+xml; charset=utf-8',
     'content-length': puffer.length,
-    /* Dasselbe Kürzel ergibt immer dasselbe Bild — das darf lange liegen. */
+    /* Dasselbe Kürzel ergibt immer dasselbe Bild, das darf lange liegen. */
     'cache-control': 'public, max-age=604800',
   })
   res.end(puffer)
@@ -64,7 +64,7 @@ const json = (res, status, body) => {
   res.end(text)
 }
 
-/** Der Browser fragt vor jedem Aufruf nach — daher die Freigabe. */
+/** Der Browser fragt vor jedem Aufruf nach, daher die Freigabe. */
 function cors(res, origin) {
   res.setHeader('access-control-allow-origin', origin ?? '*')
   res.setHeader('access-control-allow-headers', 'content-type, authorization')
@@ -111,7 +111,7 @@ export function createApiServer({ store, log = console.log }) {
      *
      *   /api/places?lat=48.53&lng=8.08&radiusKm=10&q=pizza
      *
-     * Vorher wurden die Parameter stillschweigend verworfen — die Adresse gab
+     * Vorher wurden die Parameter stillschweigend verworfen, die Adresse gab
      * immer alles zurück, und eine Prüfung „liegen die neuen Orte da, wo sie
      * hingehören?" ging damit ins Leere.
      */
@@ -142,7 +142,7 @@ export function createApiServer({ store, log = console.log }) {
 
     /*
      * Marker in einem Ausschnitt. Die Karte fragt nach dem, was sie zeigt,
-     * nicht nach allem — bei einer Weltkarte wären das sonst alle Betriebe
+     * nicht nach allem, bei einer Weltkarte wären das sonst alle Betriebe
      * auf einmal.
      *
      *   /api/karte/betriebe?nord=48.6&sued=48.4&west=8.0&ost=8.2
@@ -207,7 +207,7 @@ export function createApiServer({ store, log = console.log }) {
       callRpc({ method: body.method, args: body.args ?? [], token: bearer(req) }),
 
     /*
-     * Alles auf den Auslieferungsstand zurück — nur für Angemeldete mit
+     * Alles auf den Auslieferungsstand zurück, nur für Angemeldete mit
      * Verwaltungsrechten.
      *
      * Vorher ging das ohne jeden Nachweis. Solange der Server nur auf dem
@@ -236,7 +236,7 @@ export function createApiServer({ store, log = console.log }) {
      * Kacheln: /api/karte/kachel/14/8512/5583.png
      *
      * Eigene Zeile statt Eintrag in der Tabelle, weil die Zahlen im Pfad
-     * stehen. Die Antwort ist ein Bild, kein JSON — und sie kommt immer, zur
+     * stehen. Die Antwort ist ein Bild, kein JSON, und sie kommt immer, zur
      * Not selbst gezeichnet (siehe karte.js).
      */
     const kachelTreffer = url.pathname.match(/^\/api\/karte\/kachel\/(\d+)\/(\d+)\/(\d+)\.png$/)
@@ -251,7 +251,7 @@ export function createApiServer({ store, log = console.log }) {
      *
      * Hat der Betrieb ein echtes Bild (`bildUrl`, aus OpenStreetMap oder
      * später vom Betrieb selbst), verweist die Antwort dorthin. Sonst wird
-     * eines gezeichnet — siehe bilder.js, dort steht auch, warum.
+     * eines gezeichnet, siehe bilder.js, dort steht auch, warum.
      */
     const bildTreffer = url.pathname.match(/^\/api\/bild\/betrieb\/([^/]+)\.svg$/)
     if (req.method === 'GET' && bildTreffer) {
@@ -280,7 +280,7 @@ export function createApiServer({ store, log = console.log }) {
       if (status >= 400) log(`  ${status} ${req.method} ${url.pathname} ${out.error ?? ''} ${out.method ?? ''}`)
       return json(res, status, out)
     } catch (error) {
-      log(`  500 ${req.method} ${url.pathname} — ${error.message}`)
+      log(`  500 ${req.method} ${url.pathname}, ${error.message}`)
       return json(res, 500, { error: error.message })
     }
   })

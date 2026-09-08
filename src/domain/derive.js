@@ -6,7 +6,7 @@ import { openLabel } from './hours.js'
  * Abgeleitete Werte.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
- * │  fast jede Datei in src/domain/   decoratePlace, decorateVideo, publicUser│
+ * │  fast jede Datei in src/domain/   decoratePlace, decorateVideo, publicUser │
  * │  src/domain/geo.js                für die Entfernung                     │
  * │  src/domain/hours.js              für „jetzt geöffnet"                   │
  * └──────────────────────────────────────────────────────────────────────────┘
@@ -22,7 +22,7 @@ const avg = (values) => {
   return list.length ? list.reduce((a, b) => a + b, 0) / list.length : null
 }
 
-/** Die drei Achsen bleiben getrennt — nie zu einer Zahl zusammenfassen. */
+/** Die drei Achsen bleiben getrennt, nie zu einer Zahl zusammenfassen. */
 export function ratingOf(placeId, data = db()) {
   const list = data.reviews.filter((r) => r.placeId === placeId)
   if (list.length === 0) return { rating: null, reviewCount: 0 }
@@ -46,7 +46,7 @@ export function dishRatingOf(dishId, data = db()) {
 }
 
 /**
- * Was von einem Konto öffentlich sichtbar ist — nie das Passwort.
+ * Was von einem Konto öffentlich sichtbar ist, nie das Passwort.
  *
  * `viewerId` ist, wer gerade zusieht. Ob diese Person schon folgt, reist mit
  * den Daten mit: Sonst müsste die Oberfläche für jede Zeile einzeln nachfragen,

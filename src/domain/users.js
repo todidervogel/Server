@@ -8,13 +8,13 @@ import * as admin from './admin.js'
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/domain/calls.js   users.byId / byUsername / save / exportData / …   │
  * │  src/domain/auth.js    legt Konten an, prüft Benutzernamen mit BENUTZERNAME │
- * │  src/domain/derive.js  publicUser — was davon öffentlich ist             │
+ * │  src/domain/derive.js  publicUser, was davon öffentlich ist              │
  * └──────────────────────────────────────────────────────────────────────────┘
  */
 
 /**
  * Die Form eines Benutzernamens: 3 bis 20 Zeichen, Kleinbuchstaben, Ziffern,
- * Punkt und Unterstrich. Kein Bindestrich — der sieht in `@name-teil` aus wie
+ * Punkt und Unterstrich. Kein Bindestrich, der sieht in `@name-teil` aus wie
  * ein Trennstrich und liest sich in Sätzen falsch.
  *
  * Die Regel steht hier und nicht nur im Formular der Website. Eine Regel, die
@@ -68,7 +68,7 @@ export function setStatus(id, status, who = 'system') {
   return true
 }
 
-/** Auskunft nach Art. 15/20 DSGVO — alles, was zu diesem Konto gehört. */
+/** Auskunft nach Art. 15/20 DSGVO, alles, was zu diesem Konto gehört. */
 export function exportData(id) {
   const data = db()
   const user = data.users.find((u) => u.id === id)
@@ -88,7 +88,7 @@ export function exportData(id) {
 
 /**
  * Löschung nach Art. 17: Profil und Videos verschwinden, Bewertungen bleiben
- * anonym erhalten — sonst verfälschen sich die Durchschnittswerte. Das ist
+ * anonym erhalten, sonst verfälschen sich die Durchschnittswerte. Das ist
  * zulässig, muss aber in der Datenschutzerklärung stehen (Konzept 10).
  */
 export function deleteAccount(id) {

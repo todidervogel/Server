@@ -30,9 +30,9 @@ pruefe('Kürzel sind eindeutig', new Set(kuerzel).size === kuerzel.length,
 const kennungen = betriebe.map((b) => b.osmId)
 const doppelteKennungen = kennungen.length - new Set(kennungen).size
 pruefe('Jeder Betrieb kommt nur einmal vor', doppelteKennungen === 0,
-  `${doppelteKennungen} doppelt — die Umkreise überlappen sich`)
+  `${doppelteKennungen} doppelt, die Umkreise überlappen sich`)
 
-/* Koordinaten müssen im Umkreis liegen — sonst stimmt die Abfrage nicht. */
+/* Koordinaten müssen im Umkreis liegen, sonst stimmt die Abfrage nicht. */
 const R = 6371
 const entfernung = (a, b) => {
   const rad = (g) => (g * Math.PI) / 180
@@ -56,7 +56,7 @@ pruefe('Alle liegen im bestellten Umkreis', zuWeit.length === 0,
 
 /*
  * Derselbe Betrieb darf nicht zweimal drin sein. OpenStreetMap führt größere
- * Lokale oft als Punkt und als Gebäudefläche — gleicher Name, ein paar Meter
+ * Lokale oft als Punkt und als Gebäudefläche, gleicher Name, ein paar Meter
  * auseinander. Verschiedene Gasthöfe „Hirsch" in verschiedenen Dörfern sind
  * dagegen in Ordnung, deshalb zählt Name **und** Nähe.
  */
@@ -81,7 +81,7 @@ pruefe('Mindestens die Hälfte hat eine Adresse', mitAdresse * 2 >= betriebe.len
 
 /*
  * Ausdrücklich bestellt: Bewertungen werden aus keiner fremden Quelle
- * übernommen. Der Import schreibt keine — diese Prüfung sorgt dafür, dass es
+ * übernommen. Der Import schreibt keine, diese Prüfung sorgt dafür, dass es
  * so bleibt, auch wenn jemand später ein Feld „mitnimmt".
  */
 const BEWERTUNGSFELDER = ['rating', 'ratings', 'stars', 'reviewCount', 'reviews', 'score', 'googleRating']
@@ -92,7 +92,7 @@ pruefe('Keine übernommenen Bewertungen', mitFremdbewertung.length === 0,
 /*
  * Kein Betrieb, den es nicht mehr gibt.
  *
- * OpenStreetMap kennt kein Feld dafür und schreibt es in den Namen —
+ * OpenStreetMap kennt kein Feld dafür und schreibt es in den Namen,
  * „Lempert (dauerhaft geschlossen)". src/data/zustand.js trennt das ab und
  * wirft dauerhaft Geschlossene aus dem Bestand. Diese Prüfung sieht nach, ob
  * im Import noch etwas übrig ist.
@@ -118,6 +118,6 @@ console.log()
 
 const durchgefallen = ergebnisse.filter(([ok]) => !ok)
 ergebnisse.forEach(([ok, name, hinweis]) =>
-  console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${hinweis ? ` — ${hinweis}` : ''}`))
+  console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${hinweis ? `, ${hinweis}` : ''}`))
 console.log(`\n${ergebnisse.length - durchgefallen.length} von ${ergebnisse.length} bestanden.`)
 if (durchgefallen.length) process.exitCode = 1

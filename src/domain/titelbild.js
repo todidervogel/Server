@@ -1,5 +1,5 @@
 /**
- * Titelbilder für Betriebsseiten — gezeichnet, nicht fotografiert.
+ * Titelbilder für Betriebsseiten, gezeichnet, nicht fotografiert.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/server.js                    GET /api/bild/betrieb/:slug.svg   │
@@ -10,7 +10,7 @@
  * Sie liegt in der Fachlogik und nicht beim HTTP-Teil, weil beide sie
  * brauchen: der Server für die Adresse oben, und die Website im Alleinbetrieb,
  * wo es gar keinen Server gibt, den man fragen könnte. Reine Zeichenketten,
- * keine Umgebung — läuft in Node wie im Browser.
+ * keine Umgebung, läuft in Node wie im Browser.
  *
  * ── Warum gezeichnet und nicht fotografiert ───────────────────────────────
  *
@@ -21,12 +21,12 @@
  *     Nutzungsbedingungen und gegen das Urheberrecht der Fotografen.
  *   · OpenStreetMap führt bei einigen wenigen Betrieben ein `image`- oder
  *     `wikimedia_commons`-Merkmal. Wo es das gibt, wird es benutzt
- *     (`bildUrl` am Betrieb) — das sind aber deutlich unter fünf Prozent.
+ *     (`bildUrl` am Betrieb), das sind aber deutlich unter fünf Prozent.
  *   · Ein zugekauftes Stockfoto von irgendeinem Restaurant wäre eine
  *     Behauptung über einen Betrieb, den niemand fotografiert hat.
  *
  * Bleibt: ein Bild, das ehrlich ist. Jeder Betrieb bekommt einen eigenen,
- * ruhigen Verlauf mit seinem Anfangsbuchstaben — aus dem Kürzel gerechnet,
+ * ruhigen Verlauf mit seinem Anfangsbuchstaben, aus dem Kürzel gerechnet,
  * also immer derselbe für denselben Betrieb. Die Seite sieht vollständig aus,
  * ohne etwas vorzugeben.
  *
@@ -38,7 +38,7 @@
  */
 
 /**
- * Farbpaare je Art des Betriebs — warm und entsättigt, damit sie neben den
+ * Farbpaare je Art des Betriebs, warm und entsättigt, damit sie neben den
  * Inhalten nicht schreien. Die Töne stammen aus der Palette im design-Repo.
  */
 const FARBEN = {
@@ -66,7 +66,7 @@ function streuwert(text) {
   return wert
 }
 
-/** Der Anfangsbuchstabe — bei zwei Wörtern beide. */
+/** Der Anfangsbuchstabe, bei zwei Wörtern beide. */
 function monogramm(name) {
   const woerter = String(name ?? '')
     .replace(/[^\p{L}\p{N} ]/gu, ' ')
@@ -91,7 +91,7 @@ export function titelbild(betrieb, { breite = 1200, hoehe = 675 } = {}) {
   const paare = FARBEN[betrieb.category] ?? FARBEN.sonstiges
   const [dunkel, hell] = paare[wert % paare.length]
 
-  /* Der Verlauf steht bei jedem Betrieb etwas anders — das reicht, damit
+  /* Der Verlauf steht bei jedem Betrieb etwas anders, das reicht, damit
      zwei Cafés nebeneinander nicht wie dasselbe Bild aussehen. */
   const winkel = 20 + (wert >>> 8) % 50
   const x = 20 + (wert >>> 3) % 60

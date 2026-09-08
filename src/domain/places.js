@@ -60,7 +60,7 @@ export function byId(id, position, viewerId) {
   return place ? decoratePlace(place, { position, data, viewerId }) : null
 }
 
-/** Nächstgelegene Betriebe — für die Betriebswahl beim Hochladen (E.3). */
+/** Nächstgelegene Betriebe, für die Betriebswahl beim Hochladen (E.3). */
 export function nearby(position, limit = 8, viewerId) {
   const data = db()
   const all = data.places.map((p) => decoratePlace(p, { position, data, viewerId }))
@@ -72,12 +72,12 @@ export function nearby(position, limit = 8, viewerId) {
  *
  * Für die Karte, nicht für eine Liste: Zurück kommt nur, was ein Marker
  * braucht. Ein vollständiger Betrieb mit Bewertungen, Öffnungszeiten und
- * Entfernung ist ein Vielfaches an Daten — bei ein paar hundert Markern
+ * Entfernung ist ein Vielfaches an Daten, bei ein paar hundert Markern
  * merkt man das auf dem Handy sofort.
  *
  * Der Ausschnitt kommt als Rechteck: `nord`/`sued` sind Breitengrade,
  * `west`/`ost` Längengrade. Über den 180. Längengrad hinweg wird das
- * Rechteck geteilt — sonst wäre bei einer Karte des Pazifiks plötzlich
+ * Rechteck geteilt, sonst wäre bei einer Karte des Pazifiks plötzlich
  * alles außerhalb.
  */
 export function inBounds({ nord, sued, west, ost } = {}, limit = 500) {

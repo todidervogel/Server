@@ -6,13 +6,13 @@ import * as notifications from './notifications.js'
  * Gefällt mir, Merkzettel, Folgen.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
- * │  src/domain/calls.js    social.* — alles nur angemeldet                  │
+ * │  src/domain/calls.js    social.*, alles nur angemeldet                   │
  * │  src/domain/derive.js   viewerLiked / viewerSaved / viewerFollow         │
  * │  src/domain/users.js    räumt beim Löschen eines Kontos auf              │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Die Kennung kommt immer aus der Sitzung, nie aus dem Aufruf. In calls.js
- * steht deshalb `(ctx, [, videoId])` — der erste Wert wird weggeworfen. Sonst
+ * steht deshalb `(ctx, [, videoId])`, der erste Wert wird weggeworfen. Sonst
  * könnte jeder in fremdem Namen liken; der Rauchtest prüft genau das.
  */
 
@@ -51,7 +51,7 @@ export function followState(userId, targetId) {
   return db().follows.find((f) => f.followerId === userId && f.followingId === targetId)?.status ?? 'none'
 }
 
-/** Privaten Profilen folgt man erst nach Zustimmung — daher „pending". */
+/** Privaten Profilen folgt man erst nach Zustimmung, daher „pending". */
 export function toggleFollow(userId, targetId) {
   if (userId === targetId) return 'none'
   if (followState(userId, targetId) !== 'none') {
@@ -69,7 +69,7 @@ export function toggleFollow(userId, targetId) {
   return status
 }
 
-/** Alle Zustände zu einem Video auf einmal — spart Einzelabfragen. */
+/** Alle Zustände zu einem Video auf einmal, spart Einzelabfragen. */
 export function stateFor(userId, { videoIds = [], placeIds = [], userIds = [] } = {}) {
   const data = db()
   return {

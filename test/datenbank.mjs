@@ -27,7 +27,7 @@ const datei = join(ordner, 'test.db')
 const ergebnisse = []
 const pruefe = (name, bedingung, detail = '') => ergebnisse.push([!!bedingung, name, bedingung ? '' : detail])
 
-/** Startet einen Server auf derselben Datei — wie nach einem Neustart. */
+/** Startet einen Server auf derselben Datei, wie nach einem Neustart. */
 async function starten() {
   const store = createSqliteStore(datei, initialDatabase())
   setSitzungen(store.sitzungen)
@@ -68,7 +68,7 @@ const admin = await anmelden('topic', 'admin')
 pruefe('Anmeldung mit dem bestellten Zugang', !!admin.body.token)
 pruefe('Falsches Passwort wird abgewiesen', (await anmelden('topic', 'falsch')).status === 401)
 
-/* Ein neues Konto anlegen — genau das, was ein echter Mensch als Erstes tut. */
+/* Ein neues Konto anlegen, genau das, was ein echter Mensch als Erstes tut. */
 const neu = await s.api('/api/auth/register', {
   method: 'POST',
   body: { email: 'anna@beispiel.de', username: 'anna', name: 'Anna', password: 'Geheim123!' },
@@ -115,7 +115,7 @@ pruefe('Zu jedem Konto gibt es genau einen Zugang',
 pruefe('Im Nutzerobjekt steht kein Passwortfeld',
   s.store.get().users.every((u) => !('password' in u)))
 
-/* Gleiches Passwort, verschiedene Konten — verschiedene Hashes (eigenes Salz). */
+/* Gleiches Passwort, verschiedene Konten, verschiedene Hashes (eigenes Salz). */
 s.store.zugaenge.setzen('a1', 'DasselbeWort1!')
 const hashA = s.store.datenbank.prepare('SELECT hash FROM zugaenge WHERE userId = ?').get('a1').hash
 s.store.zugaenge.setzen(annaId, 'DasselbeWort1!')
@@ -138,6 +138,6 @@ rmSync(ordner, { recursive: true, force: true })
 
 /* --- Ergebnis ------------------------------------------------------------- */
 const daneben = ergebnisse.filter(([ok]) => !ok)
-ergebnisse.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? ` — ${detail}` : ''}`))
+ergebnisse.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? `, ${detail}` : ''}`))
 console.log(`\n${ergebnisse.length - daneben.length} von ${ergebnisse.length} bestanden.`)
 if (daneben.length) process.exitCode = 1

@@ -8,7 +8,7 @@ import { initialDatabase } from '../src/data/seed.js'
  *
  * ┌─ Was geprüft wird ───────────────────────────────────────────────────────┐
  * │  src/http/server.js    die Adressen                                      │
- * │  src/domain/calls.js   die Rechte — serverseitig, nicht im Frontend      │
+ * │  src/domain/calls.js   die Rechte, serverseitig, nicht im Frontend       │
  * │  src/domain/*.js       die Abläufe: hochladen → Freigabe → sichtbar      │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
@@ -19,11 +19,11 @@ import { initialDatabase } from '../src/data/seed.js'
  *
  * Bis zum MVP standen im Ausgangsbestand erfundene Videos, Bewertungen und
  * Speisekarten; der Test hat darauf gezeigt („Video v4 freigeben"). Seit die
- * Beispieldaten weg sind, gibt es das nicht mehr — und das ist ein Gewinn:
+ * Beispieldaten weg sind, gibt es das nicht mehr, und das ist ein Gewinn:
  * Ein Test, der seine Lage selbst herstellt, prüft dabei gleich die Wege, auf
  * denen im Betrieb wirklich etwas entsteht.
  *
- * Läuft gegen einen Server im Arbeitsspeicher — die Datenbank unter data/
+ * Läuft gegen einen Server im Arbeitsspeicher, die Datenbank unter data/
  * bleibt unberührt.
  */
 const store = createMemoryStore(initialDatabase())
@@ -75,14 +75,14 @@ check('Betriebe ohne Anmeldung lesbar',
   places.status === 200 && places.body.result?.length >= 100,
   `${places.body.result?.length} Betriebe`)
 
-/* Ein Betrieb aus dem Import — an dem hängt alles Weitere. */
+/* Ein Betrieb aus dem Import, an dem hängt alles Weitere. */
 const betrieb = places.body.result[0]
 check('Betriebe haben Lage und Kürzel', !!betrieb.slug && Number.isFinite(betrieb.lat))
 
 const einzeln = await api(`/api/g/${betrieb.slug}`)
 check('Betriebsseite über das Kürzel abrufbar', einzeln.status === 200 && einzeln.body.place.id === betrieb.id)
 
-/* Der Umkreis wirkt wirklich — sonst wäre die Karte eine Lüge. */
+/* Der Umkreis wirkt wirklich, sonst wäre die Karte eine Lüge. */
 const weitWeg = await api('/api/places?lat=-33.87&lng=151.21&radiusKm=5')
 check('Am anderen Ende der Welt ist nichts in der Nähe', weitWeg.body.result.length === 0,
   `${weitWeg.body.result.length} gefunden`)
@@ -90,7 +90,7 @@ check('Am anderen Ende der Welt ist nichts in der Nähe', weitWeg.body.result.le
 /*
  * Der Ausgangsbestand muss die eigenen Regeln einhalten. Das klingt
  * selbstverständlich und war es nicht: Die bestellten Konten hießen zuerst
- * `test-user` und `test-gastro` — mit Bindestrich, den die Regel für
+ * `test-user` und `test-gastro`, mit Bindestrich, den die Regel für
  * Benutzernamen nicht zulässt. Anmelden ging, aber sobald jemand sein Profil
  * speicherte, wies das Formular den eigenen Namen zurück.
  */
@@ -182,7 +182,7 @@ check('Gerichtbewertung schlägt auf die Karte durch', dishRating.ratingCount ==
   `ratingCount=${dishRating.ratingCount}`)
 
 const bewertet = (await rpc('places.byId', [eigenerBetrieb])).body.result
-check('Die Bewertung steht am Betrieb — drei Achsen getrennt',
+check('Die Bewertung steht am Betrieb, drei Achsen getrennt',
   bewertet.rating.food === 5 && bewertet.rating.service === 4 && bewertet.rating.price === 3)
 
 /* --- Meldungen ----------------------------------------------------------- */
@@ -235,6 +235,6 @@ check('Nach dem Abmelden gilt der Zugang nicht mehr',
 server.close()
 
 const failed = results.filter(([ok]) => !ok)
-results.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? ` — ${detail}` : ''}`))
+results.forEach(([ok, name, detail]) => console.log(`${ok ? '  ok  ' : 'FEHLER'} ${name}${detail ? `, ${detail}` : ''}`))
 console.log(`\n${results.length - failed.length} von ${results.length} bestanden.`)
 if (failed.length) process.exitCode = 1

@@ -8,8 +8,8 @@
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Alle Funktionen sind synchron und arbeiten auf dem eingehängten Store.
- * Wer sie aufruft — der HTTP-Server hier im Repo oder die Website im
- * Browser — entscheidet selbst, woher die Daten kommen und ob daraus ein
+ * Wer sie aufruft, der HTTP-Server hier im Repo oder die Website im
+ * Browser, entscheidet selbst, woher die Daten kommen und ob daraus ein
  * Versprechen wird.
  */
 export * as auth from './auth.js'

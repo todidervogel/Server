@@ -7,7 +7,7 @@ import { createMemoryStore } from '../domain/store.js'
  *
  * Für einen internen Test genau richtig: nachvollziehbar, ohne
  * Datenbankinstallation, jederzeit im Editor zu öffnen. Für den echten
- * Betrieb wird das durch PostgreSQL ersetzt — die Fachlogik darüber bleibt.
+ * Betrieb wird das durch PostgreSQL ersetzt, die Fachlogik darüber bleibt.
  */
 const VERSION = 3
 
@@ -19,9 +19,9 @@ export function createFileStore(path, initial) {
     try {
       const raw = JSON.parse(readFileSync(path, 'utf8'))
       if (raw?.version === VERSION && raw.data) data = raw.data
-      else console.warn(`[Daten] ${path} hat eine andere Fassung — beginne von vorn.`)
+      else console.warn(`[Daten] ${path} hat eine andere Fassung, beginne von vorn.`)
     } catch (error) {
-      console.warn(`[Daten] ${path} ließ sich nicht lesen (${error.message}) — beginne von vorn.`)
+      console.warn(`[Daten] ${path} ließ sich nicht lesen (${error.message}), beginne von vorn.`)
     }
   }
 

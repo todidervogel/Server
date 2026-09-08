@@ -1,5 +1,5 @@
 /**
- * Das Datenbankschema — eine Tabelle je Sache, mit Typen und Indizes.
+ * Das Datenbankschema, eine Tabelle je Sache, mit Typen und Indizes.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/store/sqlite-store.js   baut daraus CREATE TABLE und alle Abfragen  │
@@ -13,7 +13,7 @@
  * und welche verschachtelt sind (die kommen als JSON in eine Textspalte).
  * Steht das an einer Stelle, kann es nicht auseinanderlaufen.
  *
- * Die Spalten heißen wie die Felder in der Fachlogik — `placeId`, nicht
+ * Die Spalten heißen wie die Felder in der Fachlogik, `placeId`, nicht
  * `betrieb_id`. Das ist Absicht: Jede Umbenennung wäre eine Fehlerquelle mehr,
  * und wer den Code neben dem Schema liest, sucht denselben Namen.
  *
@@ -53,7 +53,7 @@ export const TABELLEN = {
       status: "TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','warned','banned'))",
       reportCount: 'INTEGER NOT NULL DEFAULT 0',
       notify: 'TEXT NOT NULL DEFAULT "{}"',
-      /* Verifizierung darf im MVP übersprungen werden — siehe domain/auth.js */
+      /* Verifizierung darf im MVP übersprungen werden, siehe domain/auth.js */
       emailVerified: 'INTEGER NOT NULL DEFAULT 0',
       phoneVerified: 'INTEGER NOT NULL DEFAULT 0',
       verificationSkipped: 'INTEGER NOT NULL DEFAULT 0',
@@ -62,7 +62,7 @@ export const TABELLEN = {
     json: ['notify'],
     bool: ['mustChangePassword', 'private', 'emailVerified', 'phoneVerified', 'verificationSkipped'],
     indizes: [
-      /* Anmeldung sucht über beides — deshalb eindeutig und indiziert. */
+      /* Anmeldung sucht über beides, deshalb eindeutig und indiziert. */
       { spalten: ['email'], eindeutig: true },
       { spalten: ['username'], eindeutig: true },
       { spalten: ['role'] },
@@ -95,7 +95,7 @@ export const TABELLEN = {
       status: 'TEXT NOT NULL DEFAULT "active"',
       closingSince: 'TEXT',
       hasCover: 'INTEGER NOT NULL DEFAULT 0',
-      /* Titelbild: Adresse, Urheber, Lizenz — alles drei oder nichts. */
+      /* Titelbild: Adresse, Urheber, Lizenz, alles drei oder nichts. */
       bildUrl: 'TEXT',
       bildQuelle: 'TEXT',
       bildLizenz: 'TEXT',
@@ -112,7 +112,7 @@ export const TABELLEN = {
     bool: ['hasCover'],
     indizes: [
       { spalten: ['slug'], eindeutig: true },
-      /* Die Kartenabfrage schneidet ein Rechteck aus — dafür beide Achsen. */
+      /* Die Kartenabfrage schneidet ein Rechteck aus, dafür beide Achsen. */
       { spalten: ['lat', 'lng'] },
       { spalten: ['region'] },
       { spalten: ['category'] },
@@ -183,7 +183,7 @@ export const TABELLEN = {
       authorId: 'TEXT',
       createdAt: 'TEXT NOT NULL DEFAULT ""',
       verifiedOnSite: 'INTEGER NOT NULL DEFAULT 0',
-      /* Drei Achsen, nie zu einer Zahl zusammengefasst — siehe domain/derive.js */
+      /* Drei Achsen, nie zu einer Zahl zusammengefasst, siehe domain/derive.js */
       ratingFood: 'INTEGER',
       ratingService: 'INTEGER',
       ratingPrice: 'INTEGER',
@@ -319,7 +319,7 @@ export const TABELLEN = {
  * `searchHistory`, `searchPopular`, `seenVideos`.
  *
  * Sie stehen zusammen in `listen(name, position, wert)`. Eine eigene Tabelle
- * je Liste wäre drei Tabellen mit je einer Spalte — das ist kein Gewinn.
+ * je Liste wäre drei Tabellen mit je einer Spalte, das ist kein Gewinn.
  */
 export const LISTEN = ['seenVideos', 'searchHistory', 'searchPopular']
 

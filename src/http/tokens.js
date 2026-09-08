@@ -8,10 +8,10 @@
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Diese Datei ist nur die Durchreiche. Wo die Sitzungen wirklich liegen,
- * steht in src/store/sitzungen.js — in der Datenbank, damit ein Neustart
+ * steht in src/store/sitzungen.js, in der Datenbank, damit ein Neustart
  * niemanden abmeldet.
  *
- * Ohne eingehängte Sitzungsverwaltung — im Rauchtest zum Beispiel — hält sie
+ * Ohne eingehängte Sitzungsverwaltung, im Rauchtest zum Beispiel, hält sie
  * die Sitzungen im Arbeitsspeicher. Dann gilt: Neustart, alle draußen.
  */
 import { randomBytes } from 'node:crypto'

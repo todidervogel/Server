@@ -1,12 +1,11 @@
 # Server
 
-Fachlogik, Datenbank und HTTP-Schnittstelle. Ohne Fremdabhängigkeiten —
-`npm install` lädt nichts nach, `node src/index.js` genügt.
+Fachlogik, Datenbank und HTTP-Schnittstelle. Ohne Fremdabhängigkeiten, `npm install` lädt nichts nach, `node src/index.js` genügt.
 
 ```bash
 node src/index.js       # startet auf Port 4000
 npm test                # 78 Prüfungen: Rauchtest, Datenbank, Karte
-npm run reset           # Datenbank und Kacheln weg — der nächste Start legt sie neu an
+npm run reset           # Datenbank und Kacheln weg, der nächste Start legt sie neu an
 ```
 
 Braucht **Node 22.5 oder neuer** (`node:sqlite`).
@@ -40,7 +39,7 @@ graph TD
 
 | Ordner | Was darin steht |
 |---|---|
-| `src/domain/` | Die Fachlogik. **Umgebungsneutral** — läuft auf dem Server *und* im Browser. Kein `node:fs`, kein `node:crypto`. |
+| `src/domain/` | Die Fachlogik. **Umgebungsneutral**, läuft auf dem Server *und* im Browser. Kein `node:fs`, kein `node:crypto`. |
 | `src/store/` | Die Datenbank. Nur Server. |
 | `src/http/` | Die Schnittstelle nach außen. Nur Server. |
 | `src/data/` | Der Ausgangsbestand und die importierten Betriebe. |
@@ -50,7 +49,7 @@ graph TD
 Die Trennung zwischen `domain/` und dem Rest ist keine Ordnungsliebe: Die
 Website führt dieselbe Fachlogik im Browser aus (eingespielte Kopie unter
 `Website-/src/domain`). Ein `import` aus `node:*` dort bricht den Bau der
-Website — und zwar erst dann, nicht hier.
+Website, und zwar erst dann, nicht hier.
 
 ---
 
@@ -59,11 +58,11 @@ Website — und zwar erst dann, nicht hier.
 SQLite, eine Datei, richtige Tabellen. `node:sqlite` ist in Node enthalten;
 es kommt nichts dazu.
 
-- **15 Tabellen** mit Typen, Bedingungen und Indizes — `src/store/schema.js`
+- **15 Tabellen** mit Typen, Bedingungen und Indizes, `src/store/schema.js`
 - **Passwörter** liegen in einer eigenen Tabelle, gehasht mit scrypt und je
-  Konto eigenem Salz — `src/store/zugaenge.js`. Im Nutzerobjekt gibt es kein
+  Konto eigenem Salz, `src/store/zugaenge.js`. Im Nutzerobjekt gibt es kein
   Passwortfeld; was nicht da ist, kann auch nicht in einer Antwort landen.
-- **Anmeldungen** stehen ebenfalls in der Datenbank — ein Neustart wirft
+- **Anmeldungen** stehen ebenfalls in der Datenbank, ein Neustart wirft
   niemanden hinaus.
 - **Gelesen wird aus dem Speicher, geschrieben sofort in die Datenbank.**
   Warum, und wann das nicht mehr reicht, steht oben in
@@ -80,7 +79,7 @@ auf dem der Server läuft.
 ### Schema ändern
 
 Spalte dazu → in `src/store/schema.js` eintragen, fertig (`IF NOT EXISTS`
-legt an, was fehlt). Etwas umbauen — Spalte umbenennen, Tabelle teilen →
+legt an, was fehlt). Etwas umbauen, Spalte umbenennen, Tabelle teilen →
 Schritt in `WANDERUNGEN` schreiben und `SCHEMA_FASSUNG` erhöhen.
 
 Schreibt die Fachlogik ein Feld, das keine Spalte hat, sagt der Server das
@@ -97,7 +96,7 @@ Still verlieren wäre schlimmer.
 ## Die Schnittstelle
 
 **Ein Eingang für die Fachlogik.** Was es gibt und wer es darf, steht in
-`src/domain/calls.js` — dieselbe Datei benutzt die Website im Alleinbetrieb.
+`src/domain/calls.js`, dieselbe Datei benutzt die Website im Alleinbetrieb.
 
 ```
 POST /api/rpc            { method: "places.list", args: [{ radiusKm: 5 }] }
@@ -124,7 +123,7 @@ GET  /api/g/:slug/speisekarte
 POST /api/reset                                     (nur Verwaltung)
 ```
 
-**Karte** — siehe unten.
+**Karte**, siehe unten.
 
 ---
 
@@ -144,7 +143,7 @@ ein Zwischenspeicher auf der Platte, Höflichkeit gegenüber den freien
 Kachelservern, und ein Stilwechsel bleibt eine Zeile. Ausführlich in
 `src/http/karte.js`.
 
-Der Stil ist **CARTO Voyager** — von den frei nutzbaren Stilen der, der dem
+Der Stil ist **CARTO Voyager**, von den frei nutzbaren Stilen der, der dem
 Bild von Google Maps am nächsten kommt: heller entsättigter Grund, farbige
 Straßen nach Rang, grüne Parks, zurückhaltende Beschriftung. Googles eigene
 Kacheln sind ohne deren SDK und ein Bezahlkonto nicht zu haben.
@@ -172,16 +171,14 @@ npm run testdaten:pruefen   # 11 Prüfungen auf dem, was da ist
 
 Vom Handy aus: **Actions → „Testdaten holen"**.
 
-**Keine übernommenen Bewertungen.** Weder von Google noch von sonst woher —
-eine fremde Sternezahl sagt nichts darüber, was bewertet wurde, und ließe
+**Keine übernommenen Bewertungen.** Weder von Google noch von sonst woher, eine fremde Sternezahl sagt nichts darüber, was bewertet wurde, und ließe
 sich nicht nachvollziehen. `tools/orte-pruefen.mjs` prüft, dass keine
 hereinkommt.
 
 **Bilder** nur aus freien Quellen (OpenStreetMap `image`, Wikimedia Commons),
 und dann mit Nennung. Für alle anderen zeichnet der Server eines.
 
-`src/data/anreicherung.js` legt Beschreibungen über die importierten Daten —
-in eigenen Worten, mit Quelle und Datum, und ohne Speisekarten mit Preisen.
+`src/data/anreicherung.js` legt Beschreibungen über die importierten Daten, in eigenen Worten, mit Quelle und Datum, und ohne Speisekarten mit Preisen.
 Warum nicht, steht oben in der Datei.
 
 ---
@@ -189,7 +186,7 @@ Warum nicht, steht oben in der Datei.
 ## Konten
 
 Kein Beispielinhalt mehr. Im Ausgangsbestand stehen die Betriebe und drei
-Zugänge — sonst nichts. Der Feed ist am Anfang leer; so sieht jede Anwendung
+Zugänge, sonst nichts. Der Feed ist am Anfang leer; so sieht jede Anwendung
 am ersten Tag aus.
 
 | Rolle | Anmeldung | Passwort |
@@ -203,7 +200,7 @@ am ersten Tag aus.
 > es gilt. Bevor echte Menschen Konten anlegen, muss es weg.
 
 Für die importierten Betriebe wird **kein** Konto angelegt. Wer einen davon
-führt, meldet sich über „Betrieb übernehmen" — dann steht am Konto auch, dass
+führt, meldet sich über „Betrieb übernehmen", dann steht am Konto auch, dass
 es geprüft wurde.
 
 ---
@@ -214,7 +211,7 @@ es geprüft wurde.
 Die Adresse steht danach in der Zusammenfassung des Laufs.
 
 Die Datenbank wird am Ende als Artefakt abgelegt und beim nächsten Lauf
-wieder eingespielt — Konten und Beiträge bleiben also von Lauf zu Lauf
+wieder eingespielt, Konten und Beiträge bleiben also von Lauf zu Lauf
 erhalten. Grenzen und Vorbehalte stehen oben in
 `.github/workflows/server-ngrok.yml`; die wichtigste: Wer das Repository
 lesen darf, kann das Artefakt herunterladen.
@@ -232,6 +229,6 @@ npm test
 
 | Datei | Prüft |
 |---|---|
-| `test/smoke.mjs` | Adressen, Rechte, ein Ablauf von Anfang bis Ende — legt sich seine Daten selbst an |
+| `test/smoke.mjs` | Adressen, Rechte, ein Ablauf von Anfang bis Ende, legt sich seine Daten selbst an |
 | `test/datenbank.mjs` | Ob alles den Neustart übersteht. Der Server wird dafür wirklich heruntergefahren |
 | `test/karte.mjs` | Kacheln, Zwischenspeicher, Marker im Ausschnitt |

@@ -16,7 +16,7 @@
  */
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-/* Dieselbe Regel wie beim Laden — siehe src/data/zustand.js. */
+/* Dieselbe Regel wie beim Laden, siehe src/data/zustand.js. */
 import { nameUndZustand } from '../src/data/zustand.js'
 
 const args = process.argv.slice(2)
@@ -45,7 +45,7 @@ const nurGegend = flag('--gegend')
 /*
  * Die Reihenfolge in der Ausgabezeile ist nicht beliebig: Erst wie
  * ausführlich (`tags`), dann welche Geometrie (`center`). Andersherum
- * antwortet Overpass mit „406 Not Acceptable“ — was wie ein Problem mit den
+ * antwortet Overpass mit „406 Not Acceptable“, was wie ein Problem mit den
  * Kopfzeilen aussieht, aber ein Syntaxfehler ist.
  */
 const abfrage = ({ lat, lng, km }) => `
@@ -65,7 +65,7 @@ const KENNUNG = 'tellerrand-mvp/1.0 (Testdaten-Import; https://github.com/todide
 const warte = (ms) => new Promise((fertig) => setTimeout(fertig, ms))
 
 /**
- * Holt eine Gegend — mit Geduld.
+ * Holt eine Gegend, mit Geduld.
  *
  * Overpass ist ein Dienst, den Freiwillige bezahlen. Er sagt regelmäßig „zu
  * viele Anfragen“, besonders von GitHub-Runnern, deren Adressen sich viele
@@ -89,7 +89,7 @@ async function hole(gegend, { versuche = 4 } = {}) {
           /*
            * Ohne Zeitlimit wartet `fetch` ewig. Ein Spiegel, der die
            * Verbindung annimmt und dann nichts mehr sagt, hält damit den
-           * ganzen Lauf an — beim zweiten Versuch stand der Ablauf 25 Minuten
+           * ganzen Lauf an, beim zweiten Versuch stand der Ablauf 25 Minuten
            * im selben Schritt, bis ich ihn abgebrochen habe. Overpass selbst
            * bekommt 90 Sekunden; nach 120 ist hier Schluss.
            */
@@ -97,12 +97,12 @@ async function hole(gegend, { versuche = 4 } = {}) {
         })
 
         if (antwort.status === 429 || antwort.status === 504) {
-          throw new Error(`${antwort.status} — überlastet`)
+          throw new Error(`${antwort.status}, überlastet`)
         }
         if (!antwort.ok) {
           /* Bei 400 verrät Overpass im Text, was an der Abfrage nicht stimmt. */
           const text = (await antwort.text()).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-          throw new Error(`${antwort.status} ${antwort.statusText}${text ? ` — ${text.slice(0, 200)}` : ''}`)
+          throw new Error(`${antwort.status} ${antwort.statusText}${text ? `, ${text.slice(0, 200)}` : ''}`)
         }
 
         const json = await antwort.json()
@@ -150,7 +150,7 @@ const kuechen = (tags) =>
 
 /**
  * Was wird hier serviert? OSM sagt es selten direkt, aber die Küche verrät
- * genug für den ersten Blick — und genau darum ging es bei der Angebotszeile.
+ * genug für den ersten Blick, und genau darum ging es bei der Angebotszeile.
  */
 function angebot(tags, kategorie) {
   const gefunden = new Set()
@@ -178,7 +178,7 @@ function angebot(tags, kategorie) {
 /*
  * Öffnungszeiten als Minuten seit Mitternacht, wie im Datenmodell. OSM kann
  * `opening_hours` beliebig kompliziert schreiben; hier wird nur die einfache,
- * häufigste Form gelesen. Alles andere bleibt leer — lieber keine Zeiten als
+ * häufigste Form gelesen. Alles andere bleibt leer, lieber keine Zeiten als
  * falsche.
  */
 const TAGE = { mo: 'mon', tu: 'tue', we: 'wed', th: 'thu', fr: 'fri', sa: 'sat', su: 'sun' }
@@ -220,7 +220,7 @@ function oeffnungszeiten(text) {
  * Ausstattung aus den OSM-Merkmalen.
  *
  * Die Oberfläche zeigt sie als Reihe von Punkten auf der Betriebsseite. Was
- * OSM nicht sagt, wird nicht behauptet — ein leeres Feld ist ehrlicher als
+ * OSM nicht sagt, wird nicht behauptet, ein leeres Feld ist ehrlicher als
  * ein geratenes „Kartenzahlung möglich".
  */
 const AUSSTATTUNG = [
@@ -244,7 +244,7 @@ const ausstattung = (tags) => AUSSTATTUNG.filter(([, trifft]) => trifft(tags)).m
  *
  * OpenStreetMap führt bei manchen Betrieben `image` (eine Adresse) oder
  * `wikimedia_commons` (ein Dateiname bei Wikimedia Commons). Beides ist frei
- * lizenziert und darf gezeigt werden — mit Nennung, deshalb kommt die Quelle
+ * lizenziert und darf gezeigt werden, mit Nennung, deshalb kommt die Quelle
  * mit.
  *
  * Von Google Maps wird **kein** Bild übernommen: Die Fotos dort gehören denen,
@@ -259,7 +259,7 @@ function bild(tags) {
     return {
       bildUrl: `https://commons.wikimedia.org/wiki/Special:FilePath/${datei}?width=1200`,
       bildQuelle: `https://commons.wikimedia.org/wiki/${encodeURIComponent(commons)}`,
-      bildLizenz: 'Wikimedia Commons — siehe Dateiseite',
+      bildLizenz: 'Wikimedia Commons, siehe Dateiseite',
     }
   }
   const direkt = tags.image
@@ -277,7 +277,7 @@ const kuerzel = (text) =>
 
 const PREIS = { restaurant: '€€', bar: '€€', cafe: '€', imbiss: '€', baeckerei: '€', sonstiges: '€' }
 
-/* Luftlinie in Kilometern — dieselbe Formel wie in der Fachlogik. */
+/* Luftlinie in Kilometern, dieselbe Formel wie in der Fachlogik. */
 function entfernungKm(a, b) {
   const rad = (g) => (g * Math.PI) / 180
   const dLat = rad(b.lat - a.lat)
@@ -292,7 +292,7 @@ function entfernungKm(a, b) {
  *
  * OpenStreetMap führt größere Lokale oft doppelt: einmal als Punkt und einmal
  * als Gebäudefläche. Beide haben denselben Namen und liegen ein paar Meter
- * auseinander. In der Liste sieht das aus wie ein Fehler — und wäre auch
+ * auseinander. In der Liste sieht das aus wie ein Fehler, und wäre auch
  * einer, wenn jemand beide bewertet.
  *
  * Verschiedene Gasthöfe „Hirsch" in verschiedenen Dörfern bleiben erhalten:
@@ -304,7 +304,7 @@ function ohneDoppelte(betriebe, meter = 150) {
     const schonDa = behalten.find(
       (b) => b.name === betrieb.name && entfernungKm(b, betrieb) * 1000 < meter,
     )
-    /* Der mit der Adresse gewinnt — meist die Gebäudefläche. */
+    /* Der mit der Adresse gewinnt, meist die Gebäudefläche. */
     if (!schonDa) behalten.push(betrieb)
     else if (!schonDa.address && betrieb.address) Object.assign(schonDa, betrieb)
   }
@@ -369,7 +369,7 @@ function umbauen(element, gegend, vergeben) {
      * Eine übernommene Sternezahl sagt nichts darüber, was hier bewertet
      * wurde, lässt sich nicht nachvollziehen und wäre eine Behauptung über
      * einen Betrieb, die wir nicht belegen können. Bewertungen entstehen in
-     * dieser Anwendung — mit Video, mit drei Achsen, oder gar nicht.
+     * dieser Anwendung, mit Video, mit drei Achsen, oder gar nicht.
      */
     hasCover: false,
   }
@@ -382,7 +382,7 @@ const alle = []
 const bericht = []
 const gescheitert = []
 
-/* Was schon im Repository liegt — daraus werden fehlende Gegenden ergänzt. */
+/* Was schon im Repository liegt, daraus werden fehlende Gegenden ergänzt. */
 let vorhanden = { betriebe: [], gegenden: [] }
 try {
   vorhanden = await import(new URL('../src/data/orte.js', import.meta.url).href)
@@ -394,7 +394,7 @@ let erste = true
 for (const gegend of GEGENDEN) {
   if (nurGegend && nurGegend !== gegend.key) continue
 
-  /* Zwischen zwei schweren Abfragen kurz Luft lassen — so steht es in der
+  /* Zwischen zwei schweren Abfragen kurz Luft lassen, so steht es in der
      Nutzungsordnung von Overpass. */
   if (!erste) await warte(8000)
   erste = false
@@ -427,12 +427,12 @@ for (const gegend of GEGENDEN) {
 
 /*
  * Betriebe, die in zwei Umkreisen liegen, gehören zu der Gegend, deren Mitte
- * näher ist. Baden-Baden liegt zwischen Rheinmünster und Oberkirch — ohne
+ * näher ist. Baden-Baden liegt zwischen Rheinmünster und Oberkirch, ohne
  * diese Regel bekäme es die Gegend, die zufällig zuerst abgefragt wurde.
  *
  * Wichtig ist, dass das **nach** dem Sammeln passiert und **vor** dem
  * Abschneiden. Beim ersten Versuch beanspruchte jede Gegend beim Einlesen
- * sofort jede Nummer, die sie sah — auch die, die sie hinterher gar nicht
+ * sofort jede Nummer, die sie sah, auch die, die sie hinterher gar nicht
  * behielt. Rheinmünster hat damit ganz Oberkirch leergeräumt: Dort blieben
  * null Betriebe im 5-km-Umkreis übrig.
  */
@@ -459,7 +459,7 @@ alle.push(...ausgewaehlt)
 
 /*
  * Was diesmal nicht kam, wird aus dem letzten Stand übernommen. Sonst würde
- * ein halb geglückter Lauf die Daten der vorigen Gegenden löschen — schlimmer
+ * ein halb geglückter Lauf die Daten der vorigen Gegenden löschen, schlimmer
  * als gar nicht zu laufen.
  */
 const geholteGegenden = new Set(bericht.map((b) => b.gegend))
@@ -478,7 +478,7 @@ if (uebernommen.length) {
 const zusammen = ohneDoppelte([...alle, ...uebernommen])
 
 if (!zusammen.length) {
-  console.error('\nNichts geholt und nichts vorhanden — es bleibt beim alten Stand.')
+  console.error('\nNichts geholt und nichts vorhanden, es bleibt beim alten Stand.')
   process.exit(1)
 }
 
@@ -486,12 +486,12 @@ if (!zusammen.length) {
  * Als Modul, nicht als JSON.
  *
  * Dieselbe Fachlogik läuft auf dem Server **und** im Browser. Eine JSON-Datei
- * müsste dort mit `node:fs` gelesen werden — das gibt es im Browser nicht, und
+ * müsste dort mit `node:fs` gelesen werden, das gibt es im Browser nicht, und
  * der Bau der Website brach daran ab. Ein Modul importieren beide gleich.
  */
 const ziel = resolve('src/data/orte.js')
 writeFileSync(ziel, `/**
- * Echte Betriebe aus OpenStreetMap — erzeugt von tools/osm-import.mjs.
+ * Echte Betriebe aus OpenStreetMap, erzeugt von tools/osm-import.mjs.
  *
  * NICHT VON HAND ÄNDERN. Der nächste Import überschreibt die Datei.
  * Quelle: OpenStreetMap-Mitwirkende, ODbL.
@@ -505,5 +505,5 @@ export const betriebe = ${JSON.stringify(zusammen, null, 2)}
 console.log(`\n${zusammen.length} Betriebe in ${ziel}`)
 bericht.forEach((b) => console.log(`  ${b.gegend}: ${b.anzahl}${b.uebernommen ? ' (aus dem letzten Stand)' : ''}`))
 if (gescheitert.length) {
-  console.log(`\nNicht erreicht: ${gescheitert.join(', ')} — noch einmal starten, wenn Overpass Luft hat.`)
+  console.log(`\nNicht erreicht: ${gescheitert.join(', ')}, noch einmal starten, wenn Overpass Luft hat.`)
 }

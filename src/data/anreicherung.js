@@ -2,8 +2,8 @@
  * Angereicherte Angaben zu importierten Betrieben.
  *
  * OpenStreetMap liefert Name, Lage, Adresse und manchmal Öffnungszeiten. Was
- * ein Betrieb *ist* — Familienbetrieb seit 1937, Fischrestaurant an der
- * Promenade, Eisdiele mit eigener Produktion — steht dort nicht. Diese Datei
+ * ein Betrieb *ist*, Familienbetrieb seit 1937, Fischrestaurant an der
+ * Promenade, Eisdiele mit eigener Produktion, steht dort nicht. Diese Datei
  * ergänzt das aus öffentlich zugänglichen Quellen.
  *
  * ────────────────────────────────────────────────────────────────────────────
@@ -18,14 +18,14 @@
  *      falsche Preise auf unserer Seite sind unser Problem, nicht das des
  *      Betriebs.
  *   2. Abgeschrieben ist nicht dasselbe wie überprüft. Eine Karte gehört vom
- *      Betrieb selbst gepflegt — dafür gibt es den Gastro-Zugang.
+ *      Betrieb selbst gepflegt, dafür gibt es den Gastro-Zugang.
  *
  * Jeder Eintrag nennt seine Quelle und das Datum. Die Betriebsseite zeigt
  * beides an, damit niemand die Angaben für bestätigt hält.
  * ────────────────────────────────────────────────────────────────────────────
  *
  * Der Schlüssel ist das Kürzel aus dem Import. Diese Datei überlebt jeden
- * neuen Import — `orte.js` wird überschrieben, sie nicht.
+ * neuen Import, `orte.js` wird überschrieben, sie nicht.
  */
 export const anreicherung = {
   /* --- Oberkirch --------------------------------------------------------- */
@@ -58,7 +58,7 @@ export const anreicherung = {
       + 'Eigener Kaffee, Antipasti mit frisch aufgeschnittenem Schinken, '
       + 'wechselnder Mittagstisch und Pasta. Im Laden Erzeugnisse kleiner '
       + 'Betriebe aus Italien.',
-    /* OSM hatte nur „sonstiges" — es ist ein Feinkostladen mit Café. */
+    /* OSM hatte nur „sonstiges", es ist ein Feinkostladen mit Café. */
     category: 'cafe',
     serving: ['getraenke', 'fleisch', 'vegetarisch', 'suesses'],
     cuisine: 'Italienisch',
@@ -74,7 +74,7 @@ export const anreicherung = {
       'Kneipe und Sportsbar in Stollhofen, seit Langem eine feste Adresse im '
       + 'Ort. Sportübertragungen auf mehreren Schirmen und Leinwand, einmal im '
       + 'Monat Livemusik.',
-    /* OSM sagt „restaurant“ — es ist eine Kneipe. Das ändert die Angebotszeile. */
+    /* OSM sagt „restaurant“, es ist eine Kneipe. Das ändert die Angebotszeile. */
     category: 'bar',
     serving: ['getraenke'],
     cuisine: 'Kneipe',

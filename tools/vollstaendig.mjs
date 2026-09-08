@@ -77,7 +77,7 @@ if (unauffindbar.length) {
 }
 
 if (fehlend.length) {
-  console.error('\nDiese Dateien kennt git nicht — nach dem Klonen fehlen sie:')
+  console.error('\nDiese Dateien kennt git nicht, nach dem Klonen fehlen sie:')
   fehlend.forEach((d) => console.error(`  ${d}`))
   console.error('\nMeist steht ein zu weites Muster in .gitignore.')
   console.error('Nachsehen mit:  git check-ignore -v <datei>')

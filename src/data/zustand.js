@@ -9,7 +9,7 @@
  * ── Das Problem ───────────────────────────────────────────────────────────
  *
  * OpenStreetMap kennt kein Feld „geschlossen". Wer einen Betrieb nicht löschen
- * will — weil das Gebäude ja noch steht —, schreibt es in den Namen:
+ * will, weil das Gebäude ja noch steht –, schreibt es in den Namen:
  *
  *     Lempert (dauerhaft geschlossen)
  *     Café Stollhofen (vorrübergehend Gesschlossen)
@@ -20,7 +20,7 @@
  *
  * Deshalb wird hier getrennt: Der Name ist der Name, der Zustand ist ein Feld.
  * Wer **dauerhaft** geschlossen hat, kommt gar nicht erst in den Bestand.
- * Wer vorübergehend zu hat, bleibt drin und trägt einen Hinweis — sonst
+ * Wer vorübergehend zu hat, bleibt drin und trägt einen Hinweis, sonst
  * verschwände jedes Lokal, das gerade Betriebsferien macht.
  *
  * Der Tippfehler „Gesschlossen" steht wirklich so in den Daten. Deshalb wird
@@ -37,7 +37,7 @@ const DAUERHAFT = /dauerhaft|permanent|closed_permanently|cerrado permanentement
 /**
  * Trennt den Namen vom Zustand.
  *
- * @returns { name, status } — status ist 'active', 'closed_reported'
+ * @returns { name, status }, status ist 'active', 'closed_reported'
  *          (vorübergehend) oder 'closed' (dauerhaft)
  */
 export function nameUndZustand(roherName) {
@@ -63,7 +63,7 @@ export function nurBestehende(betriebe) {
   return betriebe
     .map((betrieb) => {
       const { name, status } = nameUndZustand(betrieb.name)
-      /* Ein bereits gesetzter Zustand gilt weiter — er kommt aus Meldungen. */
+      /* Ein bereits gesetzter Zustand gilt weiter, er kommt aus Meldungen. */
       return { ...betrieb, name, status: status === 'active' ? betrieb.status : status }
     })
     .filter((betrieb) => betrieb.status !== 'closed')

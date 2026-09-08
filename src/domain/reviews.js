@@ -12,7 +12,7 @@ import * as notifications from './notifications.js'
  * │  src/domain/users.js    anonymisiert sie beim Löschen des Kontos         │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
- * Drei Achsen — Essen, Service, Preis — und sie bleiben getrennt. Eine
+ * Drei Achsen, Essen, Service, Preis, und sie bleiben getrennt. Eine
  * Gesamtnote wäre bequemer und würde genau das verstecken, worauf es ankommt:
  * dass „gutes Essen, lahmer Service" etwas anderes ist als „mittelmäßig".
  */

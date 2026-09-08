@@ -1,7 +1,7 @@
 import { deflateSync } from 'node:zlib'
 
 /**
- * Erzeugt Kacheln selbst — für den Fall, dass keine zu bekommen sind.
+ * Erzeugt Kacheln selbst, für den Fall, dass keine zu bekommen sind.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/karte.js   wenn der Kachelserver nicht antwortet               │
@@ -12,12 +12,12 @@ import { deflateSync } from 'node:zlib'
  * Eine Karte, deren Kacheln nicht kommen, sieht im Browser aus wie ein Loch:
  * kaputte Bildsymbole auf weißem Grund, und die Marker schweben im Nichts.
  * Ein selbst gezeichneter, ruhiger Untergrund mit feinem Raster sieht dagegen
- * nach „Karte lädt gleich" aus — die Marker stehen an derselben Stelle, und
+ * nach „Karte lädt gleich" aus, die Marker stehen an derselben Stelle, und
  * man kann weiterarbeiten.
  *
  * Ohne Fremdbibliothek: Ein PNG ist eine Signatur, drei Blöcke und je eine
  * Prüfsumme. Die Bildpunkte kommen durch `deflate` aus `node:zlib`, das in
- * Node ohnehin mitgeliefert wird — genau das Format, das ein PNG erwartet.
+ * Node ohnehin mitgeliefert wird, genau das Format, das ein PNG erwartet.
  */
 
 const GROESSE = 256
@@ -64,7 +64,7 @@ function alsPng(punkte, breite = GROESSE, hoehe = GROESSE) {
   kopf[8] = 8   /* 8 Bit je Kanal */
   kopf[9] = 2   /* Farbtyp 2: RGB ohne Durchsichtigkeit */
 
-  /* Jede Zeile beginnt mit einem Filterbyte — 0 heißt „unverändert". */
+  /* Jede Zeile beginnt mit einem Filterbyte, 0 heißt „unverändert". */
   const mitFilter = Buffer.alloc(hoehe * (1 + breite * 3))
   for (let y = 0; y < hoehe; y += 1) {
     punkte.copy(mitFilter, y * (1 + breite * 3) + 1, y * breite * 3, (y + 1) * breite * 3)

@@ -12,7 +12,7 @@ import { createApiServer } from './http/server.js'
  * ┌─ Was von hier aus zusammengesetzt wird ──────────────────────────────────┐
  * │  src/data/seed.js           der Bestand beim allerersten Start           │
  * │  src/store/sqlite-store.js  die Datenbank (Tabellen, Passwörter, …)      │
- * │  src/http/tokens.js         Anmeldungen — hier eingehängt                │
+ * │  src/http/tokens.js         Anmeldungen, hier eingehängt                 │
  * │  src/http/server.js         die HTTP-Schnittstelle                       │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
@@ -38,7 +38,7 @@ const hier = dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT ?? 4000)
 const HOST = process.env.HOST ?? '0.0.0.0'
 const DATEI = process.env.DATA_FILE ?? resolve(hier, '..', 'data', 'tellerrand.db')
-/* Die Kacheln liegen neben der Datenbank — ein Ordner, ein Backup. */
+/* Die Kacheln liegen neben der Datenbank, ein Ordner, ein Backup. */
 const KACHELN = process.env.TILE_DIR ?? resolve(dirname(DATEI), 'kacheln')
 
 const store = createSqliteStore(DATEI, initialDatabase())
@@ -65,7 +65,7 @@ server.listen(PORT, HOST, () => {
   /*
    * Ein Platzhalterpasswort auf einem Server, der über ngrok im Netz steht,
    * ist kein Schönheitsfehler. Solange es da ist, wird beim Start daran
-   * erinnert — leise wegzulassen wäre das Gegenteil von hilfreich.
+   * erinnert, leise wegzulassen wäre das Gegenteil von hilfreich.
    */
   if (store.zugaenge.pruefen('a1', 'admin')) {
     console.log('')

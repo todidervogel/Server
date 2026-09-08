@@ -1,5 +1,5 @@
 /**
- * Echte Betriebe aus OpenStreetMap — erzeugt von tools/osm-import.mjs.
+ * Echte Betriebe aus OpenStreetMap, erzeugt von tools/osm-import.mjs.
  *
  * NICHT VON HAND ÄNDERN. Der nächste Import überschreibt die Datei.
  * Quelle: OpenStreetMap-Mitwirkende, ODbL.

@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Fachlogik, Datenbank und HTTP-API — ohne Fremdabhängigkeiten",
+  "description": "Fachlogik, Datenbank und HTTP-API, ohne Fremdabhängigkeiten",
   "engines": {
     "node": ">=22.5"
   },
@@ -14,7 +14,7 @@
     "test:rauch": "node test/smoke.mjs",
     "test:datenbank": "node test/datenbank.mjs",
     "test:karte": "node test/karte.mjs",
-    "reset": "node -e \"require('node:fs').rmSync('data',{recursive:true,force:true});console.log('Datenbank und Kacheln entfernt — der nächste Start legt beides neu an.')\"",
+    "reset": "node -e \"require('node:fs').rmSync('data',{recursive:true,force:true});console.log('Datenbank und Kacheln entfernt, der nächste Start legt beides neu an.')\"",
     "testdaten": "node tools/osm-import.mjs",
     "testdaten:pruefen": "node tools/orte-pruefen.mjs",
     "pruefen:vollstaendig": "node tools/vollstaendig.mjs"

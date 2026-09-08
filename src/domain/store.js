@@ -9,7 +9,7 @@
  *
  * Wer den Store bereitstellt, entscheidet der Wirt: Der Server legt die Daten
  * in eine SQLite-Datei, die Website in den Browserspeicher. Die Fachlogik
- * darunter ist beide Male dieselbe — deshalb liegt sie hier und nicht doppelt.
+ * darunter ist beide Male dieselbe, deshalb liegt sie hier und nicht doppelt.
  *
  * Ein Store muss können:
  *   get()                        den gesamten Stand lesen
@@ -26,7 +26,7 @@
  * Server wird mit scrypt gehasht und gesalzen (src/store/zugaenge.js); im
  * Browser liegt der ganze Bestand ohnehin offen im Gerät der Nutzerin, dort
  * schützt ein Hash niemanden. Die Fachlogik fragt nur „stimmt das?" und
- * bekommt nie ein Passwort zu sehen — auch kein gehashtes.
+ * bekommt nie ein Passwort zu sehen, auch kein gehashtes.
  */
 let store = null
 
@@ -35,7 +35,7 @@ export function setStore(next) {
 }
 
 export function getStore() {
-  if (!store) throw new Error('Kein Store eingehängt — setStore() vor dem ersten Aufruf verwenden.')
+  if (!store) throw new Error('Kein Store eingehängt, setStore() vor dem ersten Aufruf verwenden.')
   return store
 }
 
@@ -53,14 +53,14 @@ export const setzePasswort = (id, klartext) => getStore().setzePasswort(id, klar
  * Baut einen Store über einem einfachen Objekt im Arbeitsspeicher.
  *
  * @param initial  der Ausgangsbestand
- * @param persist  wird nach jeder Änderung mit dem ganzen Bestand gerufen —
+ * @param persist  wird nach jeder Änderung mit dem ganzen Bestand gerufen,
  *                 so sichert die Website in den Browserspeicher
  * @param spiegel  optional: bekommt jede Änderung einzeln gemeldet, damit ein
  *                 Wirt sie gezielt weiterschreiben kann statt jedes Mal alles.
  *                 Der Server spiegelt darüber nach SQLite
  *                 (src/store/sqlite-store.js).
  * @param passwort optional: Prüfung und Setzen von Passwörtern. Ohne Angabe
- *                 werden sie im Klartext neben dem Konto geführt — für den
+ *                 werden sie im Klartext neben dem Konto geführt, für den
  *                 Alleinbetrieb im Browser in Ordnung, für einen Server nicht.
  */
 export function createMemoryStore(initial, persist = () => {}, spiegel = null, passwort = null) {
@@ -113,7 +113,7 @@ export function createMemoryStore(initial, persist = () => {}, spiegel = null, p
     /**
      * Nächste Kennung: höchste vorhandene Zahl plus eins.
      *
-     * Nicht die Anzahl der Zeilen — sonst bekäme nach einer Löschung die
+     * Nicht die Anzahl der Zeilen, sonst bekäme nach einer Löschung die
      * nächste Zeile eine Kennung, die es schon gab.
      */
     nextId(table, prefix) {

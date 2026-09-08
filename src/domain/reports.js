@@ -6,8 +6,8 @@ import * as places from './places.js'
  * Meldungen über Inhalte, Profile und Betriebe.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
- * │  src/domain/calls.js    reports.create (angemeldet), list/resolve (admin)│
- * │  src/domain/places.js   setStatus — drei Meldungen setzen „geschlossen?" │
+ * │  src/domain/calls.js    reports.create (angemeldet), list/resolve (admin) │
+ * │  src/domain/places.js   setStatus, drei Meldungen setzen „geschlossen?"  │
  * │  src/domain/admin.js    schreibt jede Entscheidung ins Protokoll         │
  * └──────────────────────────────────────────────────────────────────────────┘
  *

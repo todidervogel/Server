@@ -6,7 +6,7 @@
 #
 # Warum ein Workflow und kein Skript, das man von Hand startet: Es gibt keinen
 # Rechner. Und die Umgebung, in der dieses Repository entsteht, lässt Overpass
-# nicht durch — ein Runner schon.
+# nicht durch, ein Runner schon.
 name: Testdaten holen
 
 on:
@@ -30,7 +30,7 @@ jobs:
   holen:
     runs-on: ubuntu-latest
     # Overpass ist ein Dienst von Freiwilligen und sagt oft „zu viele
-    # Anfragen". Das Skript wartet dann und versucht es erneut — dafür
+    # Anfragen". Das Skript wartet dann und versucht es erneut, dafür
     # braucht der Lauf Luft.
     timeout-minutes: 45
     steps:
@@ -55,7 +55,7 @@ jobs:
           git config user.email 'github-actions[bot]@users.noreply.github.com'
 
           # Erst vormerken, dann vergleichen. `git diff` allein sieht eine Datei
-          # nicht, die es vorher noch gar nicht gab — beim ersten Lauf wurden
+          # nicht, die es vorher noch gar nicht gab, beim ersten Lauf wurden
           # die Daten deshalb geholt, geprüft und weggeworfen.
           git add src/data/orte.js
           if git diff --cached --quiet; then

@@ -9,12 +9,12 @@ import { BENUTZERNAME } from './users.js'
  * │  src/http/server.js   /api/auth/login, /register, /password, /me         │
  * │  src/http/rpc.js      macht aus einer Sitzung ein Konto (accountOf)      │
  * │  src/domain/calls.js  prüft darüber Rollen und Rechte                    │
- * │  src/store/zugaenge.js   hält die Passwörter — hier steht keines         │
+ * │  src/store/zugaenge.js   hält die Passwörter, hier steht keines          │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Diese Datei sieht nie ein gespeichertes Passwort. Sie fragt den Store
- * „stimmt das?" und bekommt ja oder nein. Wie geprüft wird — auf dem Server
- * mit scrypt, im Browser im Alleinbetrieb ohne — entscheidet der Wirt.
+ * „stimmt das?" und bekommt ja oder nein. Wie geprüft wird, auf dem Server
+ * mit scrypt, im Browser im Alleinbetrieb ohne, entscheidet der Wirt.
  */
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -32,7 +32,7 @@ export function login(identifier, password) {
   /*
    * „Konto unbekannt" und „Passwort falsch" werden getrennt gemeldet, weil
    * die Oberfläche daraus unterschiedliche Hilfen macht. Das verrät, ob es
-   * eine Adresse gibt — bei einem öffentlichen Dienst wäre das ein Fehler.
+   * eine Adresse gibt, bei einem öffentlichen Dienst wäre das ein Fehler.
    * Vor dem ersten echten Betrieb wird daraus eine einzige Meldung.
    */
   if (!user) return { ok: false, error: 'unknownAccount' }
@@ -73,7 +73,7 @@ export function register({ email, username, name, phone, password }) {
     status: 'active',
     reportCount: 0,
     /*
-     * Im MVP wird noch nichts verschickt — es gibt keinen Mailversand und
+     * Im MVP wird noch nichts verschickt, es gibt keinen Mailversand und
      * keinen SMS-Anbieter. Die Verifizierung lässt sich deshalb überspringen
      * (siehe `verifizierungUeberspringen`), und die Anwendung merkt sich das,
      * damit sie später gezielt nachfragen kann.
@@ -99,7 +99,7 @@ export function changePassword(id, password) {
  *
  * Das Konto bleibt nutzbar, der offene Punkt bleibt sichtbar. Sobald es
  * Mail- und SMS-Versand gibt, lässt sich daran ablesen, wer nachträglich
- * gefragt werden muss — genau dafür wird es festgehalten statt vergessen.
+ * gefragt werden muss, genau dafür wird es festgehalten statt vergessen.
  */
 export function skipVerification(id) {
   patch('users', id, { verificationSkipped: true })
@@ -114,7 +114,7 @@ export function confirmVerification(id, kanal) {
 }
 
 /**
- * Das vollständige Konto inklusive Rolle — für die Rechteprüfung in
+ * Das vollständige Konto inklusive Rolle, für die Rechteprüfung in
  * src/domain/calls.js und für /api/auth/me.
  *
  * Das `password` fliegt heraus, auch wenn es hier gar nicht mehr stehen

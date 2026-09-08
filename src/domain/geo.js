@@ -5,14 +5,14 @@
  * │  src/domain/derive.js         hängt distanceKm an jeden Betrieb          │
  * │  src/domain/videos.js         schneidet den Feed nach Umkreis            │
  * │  src/domain/places.js         Filter „im Umkreis von …"                  │
- * │  tools/osm-import.mjs         hat dieselbe Formel noch einmal — bewusst: │
+ * │  tools/osm-import.mjs         hat dieselbe Formel noch einmal, bewusst:  │
  * │                               das Werkzeug soll ohne Fachlogik laufen    │
  * │  Website-/src/lib/map.js      rechnet Marker in Bildpunkte um            │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * Solange keine echte Kartenbibliothek eingebunden ist, zeichnet die
  * Kartenansicht die Betriebe als Punkte auf eine Fläche. Die Rechnung hier
- * ist dieselbe, die später MapLibre übernimmt — nur ohne Kacheln.
+ * ist dieselbe, die später MapLibre übernimmt, nur ohne Kacheln.
  */
 
 const R = 6371 /* Erdradius in km */
@@ -29,7 +29,7 @@ export function distanceKm(a, b) {
   return 2 * R * Math.asin(Math.sqrt(s))
 }
 
-/** „450 m" bzw. „1,2 km" — deutsche Schreibweise mit Komma. */
+/** „450 m" bzw. „1,2 km", deutsche Schreibweise mit Komma. */
 export function formatDistance(km) {
   if (km == null) return ''
   if (km < 1) return `${Math.round(km * 1000 / 10) * 10} m`

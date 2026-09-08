@@ -21,23 +21,23 @@ import { createSitzungen } from './sitzungen.js'
  *
  * Gelesen wird aus dem Arbeitsspeicher, geschrieben wird sofort in die
  * Datenbank. Beim Start wird einmal alles eingelesen, danach beantwortet der
- * Server jede Abfrage aus dem Speicher — und jede Änderung geht in derselben
+ * Server jede Abfrage aus dem Speicher, und jede Änderung geht in derselben
  * Sekunde als INSERT/UPDATE/DELETE nach SQLite.
  *
  * Warum nicht bei jedem Aufruf frisch abfragen? Weil die Fachlogik in
  * `src/domain/` synchron über den gesamten Bestand rechnet: Durchschnitte,
  * Entfernungen, Feed-Reihenfolge. Bei ein paar hundert Betrieben ist der
- * ganze Bestand ein paar hundert Kilobyte — den im Speicher zu halten ist
+ * ganze Bestand ein paar hundert Kilobyte, den im Speicher zu halten ist
  * schneller als jede Abfrage und macht die Fachlogik einfacher.
  *
  * Wann das nicht mehr reicht, und zwar genau dann: sobald **zwei** Server-
  * prozesse auf dieselbe Datei zeigen. Dann sieht jeder nur seine eigenen
- * Änderungen im Speicher. Ab da wird hier direkt abgefragt statt gespiegelt —
+ * Änderungen im Speicher. Ab da wird hier direkt abgefragt statt gespiegelt,
  * die Schnittstelle nach oben bleibt dieselbe.
  *
  * ── Was durch den Neustart kommt ──────────────────────────────────────────
  * Alles: Konten, Betriebe, Videos, Bewertungen, Meldungen, Merkzettel,
- * Suchverlauf — und die Anmeldungen (src/store/sitzungen.js). Wer angemeldet
+ * Suchverlauf, und die Anmeldungen (src/store/sitzungen.js). Wer angemeldet
  * war, bleibt es auch, wenn der Server neu startet.
  */
 
@@ -68,8 +68,8 @@ function indexSql(tabelle, index) {
  * Legt an, was fehlt.
  *
  * Bewusst ohne Zauberei: `IF NOT EXISTS` überall, damit ein Start auf einer
- * vorhandenen Datei nichts kaputtmacht. Echte Änderungen am Schema — eine
- * Spalte umbenennen, eine Tabelle aufteilen — bekommen einen nummerierten
+ * vorhandenen Datei nichts kaputtmacht. Echte Änderungen am Schema, eine
+ * Spalte umbenennen, eine Tabelle aufteilen, bekommen einen nummerierten
  * Schritt in WANDERUNGEN und erhöhen SCHEMA_FASSUNG.
  */
 const WANDERUNGEN = {
@@ -102,7 +102,7 @@ function schemaAnlegen(datenbank) {
   }
   for (let f = stand.fassung; f < SCHEMA_FASSUNG; f += 1) {
     const schritt = WANDERUNGEN[f]
-    if (!schritt) throw new Error(`Kein Wanderungsschritt von Fassung ${f} — Datenbank ist neuer als der Code.`)
+    if (!schritt) throw new Error(`Kein Wanderungsschritt von Fassung ${f}, Datenbank ist neuer als der Code.`)
     console.log(`[Daten] Schema ${f} → ${f + 1}`)
     schritt(datenbank)
   }
@@ -131,7 +131,7 @@ function zuZeile(beschreibung, objekt, unbekannt) {
   }
   /*
    * Ein Feld, das die Fachlogik schreibt, das Schema aber nicht kennt, wäre
-   * sonst still verloren — der übelste Fehler, weil er erst Wochen später
+   * sonst still verloren, der übelste Fehler, weil er erst Wochen später
    * auffällt. Es wird gemeldet, damit die Spalte nachgetragen wird.
    */
   for (const spalte of Object.keys(objekt)) {
@@ -174,7 +174,7 @@ function istLeer(datenbank) {
   return true
 }
 
-/** Schreibt eine ganze Tabelle neu — für den Erstbestand und für update(). */
+/** Schreibt eine ganze Tabelle neu, für den Erstbestand und für update(). */
 function tabelleSchreiben(datenbank, name, zeilen, unbekannt) {
   const beschreibung = TABELLEN[name]
   const spalten = Object.keys(beschreibung.spalten)
@@ -205,7 +205,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
   schemaAnlegen(datenbank)
 
   /* Passwörter und Anmeldungen liegen in derselben Datei, aber nicht im
-     Fachbestand — sie gehören dem Server, nicht der Fachlogik. */
+     Fachbestand, sie gehören dem Server, nicht der Fachlogik. */
   const zugaenge = createZugaenge(datenbank)
   const sitzungen = createSitzungen(datenbank)
 
@@ -219,7 +219,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
 
   const neu = istLeer(datenbank)
   if (neu) {
-    console.log('[Daten] Neue Datenbank — Ausgangsbestand wird eingetragen.')
+    console.log('[Daten] Neue Datenbank, Ausgangsbestand wird eingetragen.')
     erstbestand(datenbank, ausgangsdaten, zugaenge, unbekannt)
     meldeUnbekannte()
   }
@@ -240,7 +240,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
     },
 
     aendern(name, id, objekt) {
-      /* Ohne Objekt gibt es nichts zu schreiben — die Zeile gibt es nicht. */
+      /* Ohne Objekt gibt es nichts zu schreiben, die Zeile gibt es nicht. */
       if (!objekt) return
       tabelleSchreiben(datenbank, name, [objekt], unbekannt)
       meldeUnbekannte()
@@ -269,7 +269,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
       meldeUnbekannte()
     },
   }, {
-    /* Die Fachlogik fragt nur „stimmt das?" — gehasht wird in zugaenge.js. */
+    /* Die Fachlogik fragt nur „stimmt das?", gehasht wird in zugaenge.js. */
     pruefen: (id, klartext) => zugaenge.pruefen(id, klartext),
     setzen: (id, klartext) => zugaenge.setzen(id, klartext),
   })
@@ -278,7 +278,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
     ...speicher,
     zugaenge,
     sitzungen,
-    /** Die offene Verbindung — zugaenge.js und sitzungen.js hängen sich daran. */
+    /** Die offene Verbindung, zugaenge.js und sitzungen.js hängen sich daran. */
     datenbank,
     neu,
 
@@ -305,7 +305,7 @@ export function createSqliteStore(pfad, ausgangsdaten) {
  * Trägt den Ausgangsbestand ein.
  *
  * Die Passwörter aus src/data/seed.js gehen dabei nicht in die Nutzertabelle,
- * sondern durch zugaenge.setzen() — dort werden sie gehasht. In `users` gibt
+ * sondern durch zugaenge.setzen(), dort werden sie gehasht. In `users` gibt
  * es keine Spalte dafür, und das ist der Sinn der Sache.
  */
 function erstbestand(datenbank, ausgangsdaten, zugaenge, unbekannt) {
@@ -319,7 +319,7 @@ function erstbestand(datenbank, ausgangsdaten, zugaenge, unbekannt) {
     for (const name of LISTEN) listeSchreiben(datenbank, name, ausgangsdaten[name])
   })
 
-  /* Hashen ist absichtlich langsam — deshalb außerhalb des Schreibblocks. */
+  /* Hashen ist absichtlich langsam, deshalb außerhalb des Schreibblocks. */
   for (const konto of ausgangsdaten.users ?? []) {
     if (konto.password) zugaenge.setzen(konto.id, konto.password)
   }
@@ -328,7 +328,7 @@ function erstbestand(datenbank, ausgangsdaten, zugaenge, unbekannt) {
 /**
  * Mehrere Schreibvorgänge als ein Vorgang.
  *
- * Ohne das schreibt SQLite jede Zeile einzeln auf die Platte — 360 Betriebe
+ * Ohne das schreibt SQLite jede Zeile einzeln auf die Platte, 360 Betriebe
  * dauern dann Sekunden statt Millisekunden. Und wichtiger: Bricht es
  * mittendrin ab, steht die Datenbank hinterher nicht halb gefüllt da.
  */

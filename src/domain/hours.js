@@ -30,7 +30,7 @@ export function formatMinutes(min) {
 }
 
 /**
- * Eine Tageszeile: „11:30 – 22:00" — oder `null`, wenn geschlossen ist.
+ * Eine Tageszeile: „11:30 – 22:00", oder `null`, wenn geschlossen ist.
  * Das Wort „Geschlossen" setzt die Oberfläche, nicht diese Datei.
  */
 export function formatDay(ranges) {
@@ -61,7 +61,7 @@ export function openState(hours, now = new Date()) {
     if (to > 1440 && minutes < to - 1440) return { open: true, until: formatMinutes(to) }
   }
 
-  /* Nächste Öffnung suchen — heute später, sonst an einem der nächsten Tage. */
+  /* Nächste Öffnung suchen, heute später, sonst an einem der nächsten Tage. */
   const laterToday = (hours[todayKey] ?? []).find(([from]) => from > minutes)
   if (laterToday) return { open: false, nextDay: 'today', nextAt: formatMinutes(laterToday[0]) }
 
@@ -77,7 +77,7 @@ export function openState(hours, now = new Date()) {
 
 /**
  * Die Zutaten für die Anzeige. Den Satz baut die Oberfläche, weil nur sie die
- * Sprache kennt — hier gibt es nur Zustand, Uhrzeit und Tageskürzel.
+ * Sprache kennt, hier gibt es nur Zustand, Uhrzeit und Tageskürzel.
  */
 export function openLabel(hours, now = new Date()) {
   const s = openState(hours, now)

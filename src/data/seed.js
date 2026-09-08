@@ -3,7 +3,7 @@ import { anreichern } from './anreicherung.js'
 import { nurBestehende } from './zustand.js'
 
 /**
- * Der Ausgangsbestand — was in der Datenbank steht, wenn sie neu ist.
+ * Der Ausgangsbestand, was in der Datenbank steht, wenn sie neu ist.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/index.js                 füllt damit eine neue Datenbank            │
@@ -19,7 +19,7 @@ import { nurBestehende } from './zustand.js'
  * Vorher standen hier erfundene Berliner Lokale mit erfundenen Videos,
  * Bewertungen, Meldungen und Speisekarten. Das war nützlich, solange es um
  * die Oberfläche ging: Man sah, wie ein voller Feed aussieht. Für einen MVP,
- * den echte Leute anfassen, ist es das Gegenteil von nützlich — niemand
+ * den echte Leute anfassen, ist es das Gegenteil von nützlich, niemand
  * erkennt von außen, was echt ist und was Kulisse, und die ersten echten
  * Beiträge stehen zwischen erfundenen.
  *
@@ -30,14 +30,14 @@ import { nurBestehende } from './zustand.js'
  *
  * `src/data/orte.js`, erzeugt von `tools/osm-import.mjs` aus OpenStreetMap.
  * `src/data/anreicherung.js` legt Beschreibungen darüber, mit Quelle und
- * Datum. Bewertungen werden aus keiner fremden Quelle übernommen — die
+ * Datum. Bewertungen werden aus keiner fremden Quelle übernommen, die
  * entstehen hier oder gar nicht.
  *
- * Zeiten stehen als Minuten seit Mitternacht — damit lässt sich „jetzt
+ * Zeiten stehen als Minuten seit Mitternacht, damit lässt sich „jetzt
  * geöffnet" wirklich rechnen statt nur anzuzeigen.
  */
 
-/** Angebotsarten — was gibt es hier zu essen und zu trinken? (C.3, C.2, C.5) */
+/** Angebotsarten, was gibt es hier zu essen und zu trinken? (C.3, C.2, C.5) */
 export const SERVING_KEYS = [
   'getraenke', 'fruehstueck', 'vegan', 'vegetarisch',
   'fleisch', 'fisch', 'meeresfruechte', 'suess', 'halal', 'glutenfrei',
@@ -57,7 +57,7 @@ export const ALLERGEN_KEYS = [
  */
 export const HOME_POSITION = { lat: 48.5333, lng: 8.0833, label: 'Oberkirch' }
 
-/** Woher die Betriebe stammen — die Oberfläche nennt Quelle und Stand. */
+/** Woher die Betriebe stammen, die Oberfläche nennt Quelle und Stand. */
 export const HERKUNFT = { geholt, quelle, gegenden }
 
 /* ==========================================================================
@@ -82,7 +82,7 @@ const betriebe = () => nurBestehende(betriebeAusOsm).map(anreichern)
 /**
  * Ein Betrieb, an dem sich der Gastro-Bereich ausprobieren lässt.
  *
- * Ausgewählt wird nicht „irgendeiner", sondern der erste mit Beschreibung —
+ * Ausgewählt wird nicht „irgendeiner", sondern der erste mit Beschreibung,
  * dessen Seite hat Inhalt, an dem man die Bearbeitung auch sieht. Gibt es
  * keinen, nimmt es den ersten überhaupt.
  */
@@ -95,7 +95,7 @@ function testBetrieb(alle) {
  *
  * Alle drei sind ausdrücklich bestellt. Sie sind Testzugänge, keine echten
  * Konten: Für die importierten Betriebe wird bewusst **kein** Konto angelegt.
- * Wer einen davon führt, meldet sich über „Betrieb übernehmen" — dann steht
+ * Wer einen davon führt, meldet sich über „Betrieb übernehmen", dann steht
  * am Konto auch, dass es geprüft wurde.
  *
  * ┌─ ACHTUNG ────────────────────────────────────────────────────────────────┐
@@ -136,7 +136,7 @@ function konten(alle) {
    Orte für die Suche
    ========================================================================== */
 
-/** Die Gegenden, für die Daten vorliegen — Sprungziele in der Suche. */
+/** Die Gegenden, für die Daten vorliegen, Sprungziele in der Suche. */
 export const locations = [
   { id: 'l1', name: 'Alcossebre', detail: 'Spanien · Costa del Azahar', lat: 40.2408, lng: 0.2706 },
   { id: 'l2', name: 'Rheinmünster', detail: 'Deutschland · 77836', lat: 48.7686, lng: 8.0511 },
@@ -144,7 +144,7 @@ export const locations = [
 ]
 
 /**
- * Häufige Suchbegriffe — aus dem Bestand gerechnet, nicht erfunden.
+ * Häufige Suchbegriffe, aus dem Bestand gerechnet, nicht erfunden.
  *
  * Ein „beliebt"-Vorschlag, der auf nichts zeigt, ist eine Sackgasse. Deshalb
  * stehen hier die Küchen, die es in den Daten wirklich am häufigsten gibt.

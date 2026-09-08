@@ -1,12 +1,12 @@
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
 /**
- * Passwörter — gehasht, gesalzen, getrennt vom Konto.
+ * Passwörter, gehasht, gesalzen, getrennt vom Konto.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/index.js            hängt sie beim Start in den Store               │
  * │  src/domain/store.js     ruft pruefen()/setzen() über den Store          │
- * │  src/domain/auth.js      fragt „stimmt das Passwort?" — mehr nicht       │
+ * │  src/domain/auth.js      fragt „stimmt das Passwort?", mehr nicht        │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * ── Warum eine eigene Tabelle ─────────────────────────────────────────────
@@ -18,7 +18,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
  * vergessen hätte gereicht.
  *
  * Jetzt liegen die Zugangsdaten in `zugaenge`. Wer ein Konto liest, bekommt
- * kein Passwort — es steht dort nicht.
+ * kein Passwort, es steht dort nicht.
  *
  * ── Das Verfahren ─────────────────────────────────────────────────────────
  *
@@ -31,7 +31,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
  *   p = 1       ohne Parallelität
  *
  * Jeder Zugang hat sein eigenes Salz. Zwei Konten mit demselben Passwort
- * haben deshalb verschiedene Hashes — eine vorberechnete Tabelle nützt
+ * haben deshalb verschiedene Hashes, eine vorberechnete Tabelle nützt
  * nichts.
  *
  * Verglichen wird mit `timingSafeEqual`. Ein gewöhnlicher Vergleich bricht

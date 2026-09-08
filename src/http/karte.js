@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { ersatzkachel } from './kachelbild.js'
 
 /**
- * Die Karte — serverseitig.
+ * Die Karte, serverseitig.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/server.js            hängt die Adressen ein                    │
@@ -23,11 +23,11 @@ import { ersatzkachel } from './kachelbild.js'
  * Gerät zum Kachelanbieter. Vier Gründe, alle praktisch:
  *
  *   1. **Ein Ausgang.** Die App spricht mit einer einzigen Adresse. Wo der
- *      Netzzugang eng ist — in dieser Entwicklungsumgebung zum Beispiel —
+ *      Netzzugang eng ist, in dieser Entwicklungsumgebung zum Beispiel,
  *      muss nur eine Verbindung erlaubt sein, nicht zwei.
  *   2. **Zwischenspeicher.** Eine Kachel wird einmal geholt und danach von
  *      der Platte bedient. Beim zweiten Blick auf dieselbe Gegend entsteht
- *      kein Netzverkehr mehr — auf dem Handy zählt das doppelt.
+ *      kein Netzverkehr mehr, auf dem Handy zählt das doppelt.
  *   3. **Höflichkeit.** Die freien Kachelserver leben von Spenden und
  *      erwarten, dass man sich zu erkennen gibt und nicht dieselbe Kachel
  *      hundertmal holt. Über einen Server ist beides leicht einzuhalten.
@@ -36,13 +36,13 @@ import { ersatzkachel } from './kachelbild.js'
  *
  * ── Welcher Stil ──────────────────────────────────────────────────────────
  *
- * Der **gewöhnliche OpenStreetMap-Stil** — der, den man auf openstreetmap.org
+ * Der **gewöhnliche OpenStreetMap-Stil**, der, den man auf openstreetmap.org
  * sieht, wenn man nichts umstellt. Ausdrücklich so bestellt, und ausdrücklich
  * **nicht** die Verkehrsansicht, die Bahnlinien und Haltestellen betont.
  *
  * Zu Google Maps: Deren Kacheln dürfen nur über deren SDK benutzt werden und
  * brauchen ein Bezahlkonto. Wer ein helleres, entsättigtes Bild will, das dem
- * näherkommt, startet den Server mit `KARTE_STIL=voyager` — dann kommen die
+ * näherkommt, startet den Server mit `KARTE_STIL=voyager`, dann kommen die
  * Kacheln von CARTO. Umgestellt wird damit nur eine Umgebungsvariable, nicht
  * eine Zeile Code, und die Namensnennung wandert mit.
  *
@@ -56,7 +56,7 @@ const hier = dirname(fileURLToPath(import.meta.url))
 /**
  * Die Kartenstile.
  *
- * `standard` ist der gewöhnliche OpenStreetMap-Stil — der, den man auf
+ * `standard` ist der gewöhnliche OpenStreetMap-Stil, der, den man auf
  * openstreetmap.org sieht, wenn man nichts umstellt. Er ist der Standard hier,
  * weil er so ausdrücklich bestellt wurde: **nicht** die Verkehrs- oder
  * ÖPNV-Ansicht, die Bahnlinien und Haltestellen betont.
@@ -100,7 +100,7 @@ const KENNUNG = 'tellerrand/1.0 (+https://github.com/todidervogel/Server)'
 
 /* --- Zwischenspeicher ------------------------------------------------------ */
 
-const HALTBAR_MS = 30 * 24 * 60 * 60 * 1000 /* 30 Tage — Karten ändern sich langsam. */
+const HALTBAR_MS = 30 * 24 * 60 * 60 * 1000 /* 30 Tage, Karten ändern sich langsam. */
 const HOECHSTZAHL = 20_000 /* etwa 250 MB; darüber fliegt das Älteste raus */
 
 let ordner = resolve(hier, '..', '..', 'data', 'kacheln')
@@ -128,7 +128,7 @@ function inSpeicher(pfad, inhalt) {
     mkdirSync(dirname(pfad), { recursive: true })
     writeFileSync(pfad, inhalt)
   } catch (fehler) {
-    /* Volle Platte darf die Karte nicht anhalten — dann eben ohne Speicher. */
+    /* Volle Platte darf die Karte nicht anhalten, dann eben ohne Speicher. */
     console.warn(`[Karte] Konnte nicht zwischenspeichern: ${fehler.message}`)
   }
   seitAufraeumen += 1
@@ -188,7 +188,7 @@ async function vomAnbieter(z, x, y) {
 }
 
 /**
- * Eine Kachel — aus dem Speicher, vom Anbieter oder selbst gezeichnet.
+ * Eine Kachel, aus dem Speicher, vom Anbieter oder selbst gezeichnet.
  *
  * Gibt immer ein Bild zurück. Ein Fehler an dieser Stelle wäre für die
  * Oberfläche nur ein Loch, an dem sie nichts ändern kann.

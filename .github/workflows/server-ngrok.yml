@@ -16,19 +16,19 @@
 #     Wert:  sneeze-till-paternity.ngrok-free.dev      (ohne https://)
 #
 # Der Token steht bewusst nirgends in diesem Repository. Ein Token in einer
-# Datei ist ein Token in der Versionsgeschichte — auch nach dem Löschen.
+# Datei ist ein Token in der Versionsgeschichte, auch nach dem Löschen.
 # ────────────────────────────────────────────────────────────────────────────
 #
 # BLEIBEN DIE DATEN?
 #
-# Ja, von Lauf zu Lauf — mit einem Umweg. Ein Workflow bekommt jedes Mal eine
+# Ja, von Lauf zu Lauf, mit einem Umweg. Ein Workflow bekommt jedes Mal eine
 # frische Maschine; alles darauf ist am Ende weg. Deshalb wird die Datenbank
 # zum Schluss als Artefakt abgelegt und beim nächsten Start wieder eingespielt.
 # Wer sich also anmeldet, ein Video hochlädt oder etwas merkt, findet es beim
 # nächsten Lauf wieder.
 #
 #   ⚠  Das Artefakt kann jeder herunterladen, der dieses Repository lesen darf.
-#      Darin stehen E-Mail-Adressen und Passwort-Hashes (scrypt, gesalzen —
+#      Darin stehen E-Mail-Adressen und Passwort-Hashes (scrypt, gesalzen,
 #      keine Klartextpasswörter). Für einen MVP mit Testzugängen ist das
 #      vertretbar; sobald echte Menschen Konten anlegen, gehört die Datenbank
 #      auf eine echte Maschine und nicht in ein Artefakt.
@@ -68,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # node:sqlite gibt es ab Node 22.5 — darauf steht die Datenhaltung.
+      # node:sqlite gibt es ab Node 22.5, darauf steht die Datenhaltung.
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -84,7 +84,7 @@ jobs:
           fi
 
       # Bevor irgendetwas startet: Ist überhaupt alles da, was der Server
-      # braucht? Der Runner klont frisch — eine Datei, die versehentlich in
+      # braucht? Der Runner klont frisch, eine Datei, die versehentlich in
       # .gitignore gelandet ist, fällt genau hier auf und sonst nirgends.
       - name: Nachsehen, ob alles im Repository liegt
         run: node tools/vollstaendig.mjs
@@ -97,13 +97,13 @@ jobs:
           mkdir -p data
 
           # Das neueste Artefakt namens „datenbank“ aus diesem Repository
-          # suchen. Gibt es keines — erster Lauf —, ist das kein Fehler.
+          # suchen. Gibt es keines, erster Lauf –, ist das kein Fehler.
           ID=$(curl -sS -H "authorization: Bearer $GH_TOKEN" \
                  "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?name=datenbank&per_page=1" \
                | jq -r '.artifacts[0].id // empty')
 
           if [ -z "$ID" ]; then
-            echo 'Kein früherer Stand gefunden — der Server legt eine neue Datenbank an.'
+            echo 'Kein früherer Stand gefunden, der Server legt eine neue Datenbank an.'
             echo "STAND=neu" >> "$GITHUB_ENV"
             exit 0
           fi
@@ -202,7 +202,7 @@ jobs:
             echo
             echo "Der Lauf endet nach ${{ inputs.minuten || '60' }} Minuten. Danach ist die Adresse tot."
             echo 'Die Datenbank wird zum Schluss als Artefakt `datenbank` abgelegt und beim'
-            echo 'nächsten Lauf wieder eingespielt — Konten und Beiträge bleiben also erhalten.'
+            echo 'nächsten Lauf wieder eingespielt, Konten und Beiträge bleiben also erhalten.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Laufen lassen
@@ -237,7 +237,7 @@ jobs:
         with:
           name: datenbank
           # Nur die Datenbank. Die Kacheln unter data/kacheln/ sind ein
-          # Zwischenspeicher — die holt der nächste Lauf einfach neu.
+          # Zwischenspeicher, die holt der nächste Lauf einfach neu.
           path: data/tellerrand.db*
           retention-days: 90
           if-no-files-found: warn
