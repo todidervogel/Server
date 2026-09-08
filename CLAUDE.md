@@ -45,7 +45,17 @@ cd Website- && npm run build
 
 # App
 cd App && node tools/pruefen.mjs
+
+# Website gegen den laufenden Server
+cd Server && npm start &
+cd Website- && VITE_API=http://localhost:4000 npm run build
+               npx vite preview --port 4174 --strictPort &
+               node tools/gegen-server.mjs
 ```
+
+**Der Lauf gegen den Server gehört dazu, nicht nur der Alleinbetrieb.** Er ist
+der einzige, der die Anmeldung wirklich am Server prüft, und der einzige, der
+merkt, wenn ein Prüfskript noch von Daten ausgeht, die es nicht mehr gibt.
 
 **Ein Skript, das viele Dateien anfasst, braucht danach eine Prüfung.** Beim
 Entfernen der Gedankenstriche hat eine zu weite Regel `(?, ?, ?)` in SQL zu
