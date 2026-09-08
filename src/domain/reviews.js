@@ -23,12 +23,38 @@ const star = (value) => {
   return Number.isFinite(n) && n >= 1 && n <= 5 ? Math.round(n) : null
 }
 
-export function byPlace(placeId, { filter = 'all', viewerId } = {}) {
+/**
+ * Der Durchschnitt einer einzelnen Bewertung über die drei Achsen.
+ *
+ * Nur zum Sortieren. Angezeigt bleiben die drei Werte getrennt, denn genau
+ * das ist der Punkt an drei Achsen.
+ */
+function schnitt(r) {
+  const werte = [r.ratingFood, r.ratingService, r.ratingPrice].filter((n) => Number.isFinite(n))
+  return werte.length ? werte.reduce((a, b) => a + b, 0) / werte.length : 0
+}
+
+/**
+ * Bewertungen eines Betriebs.
+ *
+ * `sort` kam mit der Oberfläche dazu: Das Sortiermenü auf der Betriebsseite
+ * und im Gastro-Bereich stand vorher da und tat nichts. Ein Menü, das nur
+ * zuklappt, ist kein Menü.
+ *
+ *   'neu'    die jüngste zuerst (Vorgabe)
+ *   'beste'  die mit dem höchsten Schnitt zuerst
+ */
+export function byPlace(placeId, { filter = 'all', sort = 'neu', viewerId } = {}) {
   const data = db()
   let list = data.reviews.filter((r) => r.placeId === placeId)
   if (filter === 'withVideo') list = list.filter((r) => r.videoId)
   if (filter === 'verified') list = list.filter((r) => r.verifiedOnSite)
-  return list.map((r) => decorateReview(r, data, viewerId))
+
+  const sortiert = [...list].sort((a, b) => (sort === 'beste'
+    ? schnitt(b) - schnitt(a)
+    : String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))))
+
+  return sortiert.map((r) => decorateReview(r, data, viewerId))
 }
 
 export function byAuthor(authorId, viewerId) {

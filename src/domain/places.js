@@ -40,12 +40,66 @@ function sortPlaces(list, sort) {
   return copy.sort((a, b) => (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9))
 }
 
+/* ==========================================================================
+   Vorfiltern, bevor gerechnet wird
+   ========================================================================== */
+
+/**
+ * Liegt der Betrieb im Rechteck?
+ *
+ * Dieselbe Rechnung wie in `inBounds`, hier für die Liste. Über den 180.
+ * Längengrad hinweg wird das Rechteck geteilt.
+ */
+function imAusschnitt(p, { nord, sued, west, ost }) {
+  if (![nord, sued, west, ost].every(Number.isFinite)) return true
+  if (p.lat < sued || p.lat > nord) return false
+  return west <= ost ? p.lng >= west && p.lng <= ost : p.lng >= west || p.lng <= ost
+}
+
+/**
+ * Grobe Umkreisprüfung, ohne Wurzel und ohne Winkelfunktionen je Betrieb.
+ *
+ * ┌─ Warum das sein muss ────────────────────────────────────────────────────┐
+ * │  `decoratePlace` rechnet Entfernung, Öffnung, Bewertungsschnitt und      │
+ * │  Videozahl. Das ist für einen Betrieb nichts und für zwölftausend viel.  │
+ * │  Seit der Bestand ganz Deutschland umfasst, lief das bei jedem           │
+ * │  Tastendruck in der Suche einmal komplett durch.                         │
+ * │                                                                          │
+ * │  Also erst grob aussortieren, dann rechnen. Das Kästchen ist absichtlich │
+ * │  großzügig: Es darf zu viel durchlassen, denn die genaue Prüfung kommt   │
+ * │  danach in `applyFilters`. Es darf nur nichts verlieren.                 │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+function grobImUmkreis(p, position, radiusKm) {
+  if (!position || !Number.isFinite(radiusKm)) return true
+  const gradBreite = radiusKm / 111.32
+  const kosinus = Math.cos((position.lat * Math.PI) / 180)
+  /* An den Polen wird der Nenner winzig, dann lassen wir alles durch. */
+  const gradLaenge = Math.abs(kosinus) < 0.01 ? 180 : radiusKm / (111.32 * kosinus)
+  return Math.abs(p.lat - position.lat) <= gradBreite
+    && Math.abs(p.lng - position.lng) <= Math.abs(gradLaenge)
+}
+
+/**
+ * Die Liste der Betriebe.
+ *
+ * `bounds` ist der Kartenausschnitt, `limit` die Obergrenze. Beide kommen von
+ * der Karte, die nur zeigt, was gerade im Bild liegt. Ohne beides verhält
+ * sich die Liste wie vorher.
+ */
 export function list(filters = {}) {
   const data = db()
-  const all = data.places
+
+  const roh = data.places
     .filter((p) => p.status !== 'archived')
-    .map((p) => decoratePlace(p, { position: filters.position, data, viewerId: filters.viewerId }))
-  return sortPlaces(applyFilters(all, filters), filters.sort)
+    .filter((p) => (filters.bounds ? imAusschnitt(p, filters.bounds) : true))
+    .filter((p) => grobImUmkreis(p, filters.position, filters.radiusKm))
+
+  const all = roh.map((p) => decoratePlace(p, { position: filters.position, data, viewerId: filters.viewerId }))
+  const sortiert = sortPlaces(applyFilters(all, filters), filters.sort)
+
+  const grenze = Number.isFinite(filters.limit) ? Math.min(Math.max(filters.limit, 1), 1000) : null
+  return grenze ? sortiert.slice(0, grenze) : sortiert
 }
 
 export function bySlug(slug, position, viewerId) {

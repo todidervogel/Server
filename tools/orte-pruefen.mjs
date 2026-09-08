@@ -102,6 +102,27 @@ const mitHinweis = betriebe.filter((b) => ZUSATZ.test(b.name))
 pruefe('Kein Schließungshinweis im Namen', mitHinweis.length === 0,
   mitHinweis.slice(0, 3).map((b) => b.name).join(' | '))
 
+/*
+ * ┌─ Keine erfundenen Betriebe ──────────────────────────────────────────────┐
+ * │  Jeder Betrieb im Bestand muss aus OpenStreetMap stammen und seine       │
+ * │  Herkunft mitbringen. Eine Seite für ein Lokal, das es nicht gibt, wäre  │
+ * │  schlimmer als eine fehlende Seite: Wer hinfährt, steht vor einer        │
+ * │  Hauswand.                                                               │
+ * │                                                                          │
+ * │  `osmId` ist der Nachweis. Sie zeigt auf den Eintrag, aus dem der        │
+ * │  Betrieb kommt, und lässt sich nachschlagen. Wer im Prüfwerkzeug         │
+ * │  (Website-/tools/pruefbestand.mjs) Daten zum Ausprobieren braucht, legt  │
+ * │  sie dort ab und nicht hier.                                             │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+const ohneHerkunft = betriebe.filter((b) => !b.osmId)
+pruefe('Jeder Betrieb stammt aus OpenStreetMap', ohneHerkunft.length === 0,
+  `${ohneHerkunft.length} ohne osmId: ${ohneHerkunft.slice(0, 3).map((b) => b.name).join(' | ')}`)
+
+const falscheHerkunft = betriebe.filter((b) => b.osmId && !/^(node|way|relation)\/\d+$/.test(b.osmId))
+pruefe('Jede Herkunft lässt sich nachschlagen', falscheHerkunft.length === 0,
+  falscheHerkunft.slice(0, 3).map((b) => `${b.name}: ${b.osmId}`).join(' | '))
+
 /* Bilder: nur aus freien Quellen, und dann mit Nennung. */
 const bilderOhneQuelle = betriebe.filter((b) => b.bildUrl && !b.bildQuelle)
 pruefe('Jedes Bild nennt seine Quelle', bilderOhneQuelle.length === 0,
@@ -123,6 +144,8 @@ if (existsSync('src/data/deutschland.json')) {
     liste.every((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng)))
   pruefe('Fläche: Kennungen sind eindeutig',
     new Set(liste.map((b) => b.id)).size === liste.length)
+  pruefe('Fläche: jeder stammt aus OpenStreetMap',
+    liste.every((b) => b.osmId), `${liste.filter((b) => !b.osmId).length} ohne osmId`)
   pruefe('Fläche: keine übernommenen Bewertungen',
     liste.every((b) => BEWERTUNGSFELDER.every((feld) => !(feld in b))))
   console.log(`\nFläche: ${liste.length} Betriebe in ${(flaeche.gegenden ?? []).length} Gegenden.`)

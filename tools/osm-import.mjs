@@ -57,11 +57,28 @@ const nurGegend = flag('--gegend')
  * antwortet Overpass mit „406 Not Acceptable“, was wie ein Problem mit den
  * Kopfzeilen aussieht, aber ein Syntaxfehler ist.
  */
+/*
+ * ┌─ Was als Gastro zählt ───────────────────────────────────────────────────┐
+ * │  Alles, wo man vor Ort etwas zu essen oder zu trinken kauft, egal ob     │
+ * │  man sich hinsetzt oder es mitnimmt. Also nicht nur Restaurants:         │
+ * │                                                                         │
+ * │  amenity   restaurant, cafe, fast_food, bar, pub, ice_cream,            │
+ * │            biergarten, food_court                                       │
+ * │  shop      bakery, pastry, confectionery, deli, butcher, coffee         │
+ * │                                                                         │
+ * │  Die Bäckerei mit zwei Stehtischen, die Eisdiele, der Kaffeeröster mit  │
+ * │  Ausschank, die Metzgerei mit Mittagstisch: alles Betriebe, über die    │
+ * │  jemand ein Video drehen würde.                                         │
+ * │                                                                         │
+ * │  Draußen bleibt reiner Handel: Supermarkt, Getränkemarkt, Kiosk. Dort   │
+ * │  kauft man etwas, das anderswo hergestellt wurde.                       │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
 const abfrage = ({ lat, lng, km }) => `
 [out:json][timeout:90];
 (
-  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten)$"](around:${km * 1000},${lat},${lng});
-  nwr["shop"~"^(bakery|butcher|deli)$"](around:${km * 1000},${lat},${lng});
+  nwr["amenity"~"^(restaurant|cafe|fast_food|bar|pub|ice_cream|biergarten|food_court)$"](around:${km * 1000},${lat},${lng});
+  nwr["shop"~"^(bakery|pastry|confectionery|butcher|deli|coffee)$"](around:${km * 1000},${lat},${lng});
 );
 out tags center;`
 
@@ -134,10 +151,18 @@ async function hole(gegend, { versuche = 4 } = {}) {
 
 /* --- Übersetzung OSM → unser Datenmodell ---------------------------------- */
 
+/*
+ * OSM-Art → unsere Kategorie.
+ *
+ * Vorher landeten Pub und Eisdiele unter „bar" und „cafe", obwohl es beide
+ * Kategorien in der App gibt. Die Filter dafür konnten deshalb nie etwas
+ * finden: ein Filter, der auf nichts zeigt, ist schlimmer als keiner.
+ */
 const KATEGORIE = {
   restaurant: 'restaurant', cafe: 'cafe', fast_food: 'imbiss', bar: 'bar',
-  pub: 'bar', ice_cream: 'cafe', biergarten: 'bar',
-  bakery: 'baeckerei', butcher: 'sonstiges', deli: 'sonstiges',
+  pub: 'pub', ice_cream: 'eisdiele', biergarten: 'bar', food_court: 'imbiss',
+  bakery: 'baeckerei', pastry: 'baeckerei', confectionery: 'baeckerei',
+  coffee: 'cafe', butcher: 'sonstiges', deli: 'sonstiges',
 }
 
 /* OSM schreibt Küchen englisch und mit Semikolon getrennt. */
@@ -172,11 +197,11 @@ function angebot(tags, kategorie) {
 
   if (hat('seafood', 'fish', 'sushi', 'paella')) { gefunden.add('fisch'); gefunden.add('meeresfruechte') }
   if (hat('steak', 'barbecue', 'burger', 'kebab', 'chicken', 'grill')) gefunden.add('fleisch')
-  if (hat('cake', 'ice_cream', 'dessert') || kategorie === 'baeckerei') gefunden.add('suesses')
+  if (hat('cake', 'ice_cream', 'dessert') || kategorie === 'baeckerei' || kategorie === 'eisdiele') gefunden.add('suesses')
   if (hat('vegan')) gefunden.add('vegan')
   if (hat('vegetarian')) gefunden.add('vegetarisch')
 
-  if (kategorie === 'bar') gefunden.add('getraenke')
+  if (kategorie === 'bar' || kategorie === 'pub') gefunden.add('getraenke')
   if (kategorie === 'cafe') { gefunden.add('getraenke'); gefunden.add('suesses') }
 
   /* Ein Restaurant ohne jede Angabe: Fleisch und Vegetarisch sind die sichere Annahme. */
@@ -284,7 +309,10 @@ const kuerzel = (text) =>
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
 
-const PREIS = { restaurant: '€€', bar: '€€', cafe: '€', imbiss: '€', baeckerei: '€', sonstiges: '€' }
+const PREIS = {
+  restaurant: '€€', bar: '€€', pub: '€€', cafe: '€', imbiss: '€',
+  baeckerei: '€', eisdiele: '€', sonstiges: '€',
+}
 
 /* Luftlinie in Kilometern, dieselbe Formel wie in der Fachlogik. */
 function entfernungKm(a, b) {
@@ -321,8 +349,8 @@ function ohneDoppelte(betriebe, meter = 150) {
 }
 
 const kategorieName = (k) => ({
-  restaurant: 'Restaurant', cafe: 'Café', imbiss: 'Imbiss',
-  bar: 'Bar', baeckerei: 'Bäckerei', sonstiges: 'Sonstiges',
+  restaurant: 'Restaurant', cafe: 'Café', imbiss: 'Imbiss', pub: 'Pub',
+  bar: 'Bar', baeckerei: 'Bäckerei', eisdiele: 'Eisdiele', sonstiges: 'Sonstiges',
 }[k])
 
 function umbauen(element, gegend, vergeben) {
