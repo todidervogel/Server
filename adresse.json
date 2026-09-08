@@ -1,7 +1,7 @@
 {
   "adresse": "https://sneeze-till-paternity.ngrok-free.dev",
   "seit": "2026-09-08T08:11:52Z",
-  "laeuftBis": "2026-09-08T09:11:52Z",
-  "beendet": false,
+  "laeuftBis": "2026-09-08T09:11:59Z",
+  "beendet": true,
   "lauf": "https://github.com/todidervogel/Server/actions/runs/34203180060"
 }
