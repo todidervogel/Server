@@ -2,6 +2,20 @@ import { db, insert, nextId, patch } from './store.js'
 import * as admin from './admin.js'
 import * as places from './places.js'
 
+/**
+ * Meldungen über Inhalte, Profile und Betriebe.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    reports.create (angemeldet), list/resolve (admin)│
+ * │  src/domain/places.js   setStatus — drei Meldungen setzen „geschlossen?" │
+ * │  src/domain/admin.js    schreibt jede Entscheidung ins Protokoll         │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Mehrere Meldungen zur selben Sache werden zu einer mit Zähler. Sonst stünde
+ * derselbe Fall zwanzigmal in der Liste, und die Verwaltung sähe den Wald
+ * nicht mehr.
+ */
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 const REASONS = ['spam', 'offensive', 'fake', 'wrong_info', 'venue_closed', 'wrong_place', 'other']

@@ -1,5 +1,6 @@
 import { betriebe as betriebeAusOsm, geholt, quelle, gegenden } from './orte.js'
 import { anreichern } from './anreicherung.js'
+import { nurBestehende } from './zustand.js'
 
 /**
  * Der Ausgangsbestand — was in der Datenbank steht, wenn sie neu ist.
@@ -68,8 +69,11 @@ export const HERKUNFT = { geholt, quelle, gegenden }
  *
  * Als Modul eingebunden, nicht als Datei gelesen: Dieselbe Fachlogik läuft im
  * Browser, und dort gibt es kein Dateisystem.
+ *
+ * `nurBestehende` wirft heraus, was dauerhaft geschlossen ist: Es soll keine
+ * Seite für einen Betrieb geben, den es nicht mehr gibt. Siehe zustand.js.
  */
-const betriebe = () => betriebeAusOsm.map(anreichern)
+const betriebe = () => nurBestehende(betriebeAusOsm).map(anreichern)
 
 /* ==========================================================================
    Konten
@@ -111,14 +115,14 @@ function konten(alle) {
       notify: { moderation: true },
     },
     {
-      id: 'u1', username: 'test-user', name: 'Test-Nutzer', email: 'test@user.de',
+      id: 'u1', username: 'test_user', name: 'Test-Nutzer', email: 'test@user.de',
       password: '12345aA?', role: 'user', private: false, joined: '2026-09-07',
       bio: 'Konto zum Ausprobieren.', website: '', radius: 5, status: 'active', reportCount: 0,
       emailVerified: false, phoneVerified: false, verificationSkipped: true,
       notify: { follows: true, likes: true, replies: true, moderation: true },
     },
     {
-      id: 'g1', username: 'test-gastro', name: 'Test-Gastro', email: 'test@gastro.de',
+      id: 'g1', username: 'test_gastro', name: 'Test-Gastro', email: 'test@gastro.de',
       password: '12345aA?', role: 'gastro', placeId: test?.id ?? null,
       private: false, joined: '2026-09-07', bio: '', website: '', radius: 5,
       status: 'active', reportCount: 0,

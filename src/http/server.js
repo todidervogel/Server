@@ -3,7 +3,7 @@ import * as domain from '../domain/index.js'
 import * as tokens from './tokens.js'
 import { callRpc, listRoutes } from './rpc.js'
 import { kachel, stil } from './karte.js'
-import { titelbild } from './bilder.js'
+import { titelbild } from '../domain/titelbild.js'
 
 /**
  * Der HTTP-Server. Ohne Fremdabhängigkeiten — `npm install` lädt nichts nach,

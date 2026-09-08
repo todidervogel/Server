@@ -1,6 +1,21 @@
 import { db, insert, nextId, patch } from './store.js'
 import { decoratePlace, publicUser } from './derive.js'
 
+/**
+ * Verwaltung: Übersicht, Einladungen, Vorschläge, Protokoll.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js       admin.* — alles nur mit Rolle „admin"         │
+ * │  src/domain/videos.js      ruft log() bei jeder Freigabe                 │
+ * │  src/domain/users.js       ruft log() bei Sperre und Verwarnung          │
+ * │  src/domain/reports.js     ruft log() beim Bearbeiten einer Meldung      │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * `log()` ist der Grund, warum diese Datei von überall gerufen wird: Jede
+ * Entscheidung eines Menschen über fremde Inhalte muss nachvollziehbar sein —
+ * wer, wann, was, warum. Ohne das ist Moderation Willkür.
+ */
+
 const today = () => new Date().toISOString().slice(0, 10)
 const nowIso = () => new Date().toISOString().slice(0, 19)
 

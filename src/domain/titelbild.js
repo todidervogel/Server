@@ -1,10 +1,16 @@
 /**
- * Titelbilder für Betriebsseiten — vom Server erzeugt.
+ * Titelbilder für Betriebsseiten — gezeichnet, nicht fotografiert.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/server.js                    GET /api/bild/betrieb/:slug.svg   │
  * │  Website-/src/routes/public/PlacePage.jsx   zeigt es als Kopfbild        │
+ * │  src/domain/index.js                   gibt sie beiden weiter            │
  * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Sie liegt in der Fachlogik und nicht beim HTTP-Teil, weil beide sie
+ * brauchen: der Server für die Adresse oben, und die Website im Alleinbetrieb,
+ * wo es gar keinen Server gibt, den man fragen könnte. Reine Zeichenketten,
+ * keine Umgebung — läuft in Node wie im Browser.
  *
  * ── Warum gezeichnet und nicht fotografiert ───────────────────────────────
  *
@@ -107,7 +113,7 @@ export function titelbild(betrieb, { breite = 1200, hoehe = 675 } = {}) {
   <circle cx="${breite * 0.82}" cy="${hoehe * 0.24}" r="${hoehe * 0.42}" fill="#ffffff" opacity="0.06"/>
   <circle cx="${breite * 0.18}" cy="${hoehe * 0.86}" r="${hoehe * 0.33}" fill="#000000" opacity="0.06"/>
   <text x="${breite / 2}" y="${hoehe / 2}" text-anchor="middle" dominant-baseline="central"
-        font-family="Georgia, 'Times New Roman', serif" font-size="${hoehe * 0.34}"
-        fill="#ffffff" opacity="0.82" letter-spacing="${hoehe * 0.01}">${sicher(monogramm(betrieb.name))}</text>
+        font-family="Georgia, 'Times New Roman', serif" font-size="${hoehe * 0.2}"
+        fill="#ffffff" opacity="0.55" letter-spacing="${hoehe * 0.02}">${sicher(monogramm(betrieb.name))}</text>
 </svg>`
 }

@@ -1,5 +1,16 @@
 import { db, insert, nextId, update } from './store.js'
 
+/**
+ * Benachrichtigungen.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    notifications.list / unreadCount / markAllRead   │
+ * │  src/domain/videos.js   meldet Freigabe und Ablehnung                    │
+ * │  src/domain/social.js   meldet neue Folgende                             │
+ * │  src/domain/reviews.js  meldet die Antwort eines Betriebs                │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+
 const nowIso = () => new Date().toISOString().slice(0, 19)
 
 export function list(userId) {

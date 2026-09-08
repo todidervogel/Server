@@ -1,6 +1,12 @@
 /**
  * Die Fachlogik in einem Bündel.
  *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/http/server.js       der Server auf dieser Seite                    │
+ * │  src/http/rpc.js          dito                                           │
+ * │  Website-/src/lib/store/  die Website im Alleinbetrieb, im Browser       │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
  * Alle Funktionen sind synchron und arbeiten auf dem eingehängten Store.
  * Wer sie aufruft — der HTTP-Server hier im Repo oder die Website im
  * Browser — entscheidet selbst, woher die Daten kommen und ob daraus ein
@@ -22,5 +28,6 @@ export * as gastro from './gastro.js'
 export { setStore, getStore, createMemoryStore } from './store.js'
 export { invoke, listCalls, hasCall } from './calls.js'
 export * from './derive.js'
+export * from './titelbild.js'
 export * from './geo.js'
 export * from './hours.js'

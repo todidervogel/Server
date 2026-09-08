@@ -1,6 +1,15 @@
 import { db } from './store.js'
 import { decorateReview, ratingOf } from './derive.js'
 
+/**
+ * Die Übersicht für einen Betrieb.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js   gastro.dashboard — nur für den eigenen Betrieb    │
+ * │  src/domain/derive.js  liefert die abgeleiteten Zahlen                   │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+
 /** Kennzahlen für das Gastro-Dashboard (F.4) — alles gerechnet, nichts gespeichert. */
 export function dashboard(placeId) {
   const data = db()

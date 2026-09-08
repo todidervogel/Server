@@ -1,101 +1,237 @@
 # Server
 
-Die Fachlogik und die HTTP-Schnittstelle. **Ohne Fremdabhängigkeiten** —
-`npm install` lädt nichts nach, es genügt Node 20 oder neuer.
+Fachlogik, Datenbank und HTTP-Schnittstelle. Ohne Fremdabhängigkeiten —
+`npm install` lädt nichts nach, `node src/index.js` genügt.
 
 ```bash
-npm start          # http://localhost:4000
-npm test           # 30 Prüfungen, eigener Server im Arbeitsspeicher
-npm run dev        # startet bei Änderungen neu
-npm run reset      # Daten auf den Auslieferungsstand zurücksetzen
+node src/index.js       # startet auf Port 4000
+npm test                # 78 Prüfungen: Rauchtest, Datenbank, Karte
+npm run reset           # Datenbank und Kacheln weg — der nächste Start legt sie neu an
 ```
 
-## Gleich mal ausprobieren
+Braucht **Node 22.5 oder neuer** (`node:sqlite`).
+
+---
+
+## Was wo liegt
+
+```mermaid
+graph TD
+  A[src/index.js] --> B[src/store/sqlite-store.js]
+  A --> C[src/http/server.js]
+  A --> D[src/data/seed.js]
+
+  B --> B1[src/store/schema.js]
+  B --> B2[src/store/zugaenge.js]
+  B --> B3[src/store/sitzungen.js]
+
+  C --> C1[src/http/rpc.js]
+  C --> C2[src/http/karte.js]
+  C --> C3[src/http/tokens.js]
+  C1 --> E[src/domain/calls.js]
+  E --> F[src/domain/*.js]
+  F --> G[src/domain/store.js]
+  G --> B
+
+  D --> D1[src/data/orte.js]
+  D --> D2[src/data/anreicherung.js]
+  D1 -.erzeugt von.-> D3[tools/osm-import.mjs]
+```
+
+| Ordner | Was darin steht |
+|---|---|
+| `src/domain/` | Die Fachlogik. **Umgebungsneutral** — läuft auf dem Server *und* im Browser. Kein `node:fs`, kein `node:crypto`. |
+| `src/store/` | Die Datenbank. Nur Server. |
+| `src/http/` | Die Schnittstelle nach außen. Nur Server. |
+| `src/data/` | Der Ausgangsbestand und die importierten Betriebe. |
+| `tools/` | Import aus OpenStreetMap und die Prüfung der Daten. |
+| `test/` | Drei Prüfdateien, zusammen 78 Prüfungen. |
+
+Die Trennung zwischen `domain/` und dem Rest ist keine Ordnungsliebe: Die
+Website führt dieselbe Fachlogik im Browser aus (eingespielte Kopie unter
+`Website-/src/domain`). Ein `import` aus `node:*` dort bricht den Bau der
+Website — und zwar erst dann, nicht hier.
+
+---
+
+## Die Datenbank
+
+SQLite, eine Datei, richtige Tabellen. `node:sqlite` ist in Node enthalten;
+es kommt nichts dazu.
+
+- **15 Tabellen** mit Typen, Bedingungen und Indizes — `src/store/schema.js`
+- **Passwörter** liegen in einer eigenen Tabelle, gehasht mit scrypt und je
+  Konto eigenem Salz — `src/store/zugaenge.js`. Im Nutzerobjekt gibt es kein
+  Passwortfeld; was nicht da ist, kann auch nicht in einer Antwort landen.
+- **Anmeldungen** stehen ebenfalls in der Datenbank — ein Neustart wirft
+  niemanden hinaus.
+- **Gelesen wird aus dem Speicher, geschrieben sofort in die Datenbank.**
+  Warum, und wann das nicht mehr reicht, steht oben in
+  `src/store/sqlite-store.js`.
+
+```
+data/tellerrand.db        die Datenbank
+data/kacheln/             Zwischenspeicher der Kartenkacheln
+```
+
+Beides steht in `.gitignore`: Es entsteht im Betrieb und gehört dem Rechner,
+auf dem der Server läuft.
+
+### Schema ändern
+
+Spalte dazu → in `src/store/schema.js` eintragen, fertig (`IF NOT EXISTS`
+legt an, was fehlt). Etwas umbauen — Spalte umbenennen, Tabelle teilen →
+Schritt in `WANDERUNGEN` schreiben und `SCHEMA_FASSUNG` erhöhen.
+
+Schreibt die Fachlogik ein Feld, das keine Spalte hat, sagt der Server das
+beim Start:
+
+```
+[Daten] Ohne Spalte im Schema, deshalb nicht gespeichert: lieblingsfarbe
+```
+
+Still verlieren wäre schlimmer.
+
+---
+
+## Die Schnittstelle
+
+**Ein Eingang für die Fachlogik.** Was es gibt und wer es darf, steht in
+`src/domain/calls.js` — dieselbe Datei benutzt die Website im Alleinbetrieb.
+
+```
+POST /api/rpc            { method: "places.list", args: [{ radiusKm: 5 }] }
+```
+
+**Anmeldung**
+
+```
+POST /api/auth/login     { identifier, password }   identifier = E-Mail oder Benutzername
+POST /api/auth/register  { email, username, name, phone, password }
+POST /api/auth/password   { password }              (angemeldet)
+GET  /api/auth/me
+POST /api/auth/logout
+```
+
+**Zum Nachsehen mit curl**
+
+```
+GET  /api/health
+GET  /api/routes
+GET  /api/places?lat=48.53&lng=8.08&radiusKm=5&q=pizza
+GET  /api/g/:slug
+GET  /api/g/:slug/speisekarte
+POST /api/reset                                     (nur Verwaltung)
+```
+
+**Karte** — siehe unten.
+
+---
+
+## Die Karte
+
+Weltweit, über den eigenen Server.
+
+```
+GET /api/karte/stil                    Stil und Namensnennung
+GET /api/karte/kachel/:z/:x/:y.png     eine Kachel
+GET /api/karte/betriebe?nord=&sued=&west=&ost=&max=
+GET /api/bild/betrieb/:slug.svg        Titelbild eines Betriebs
+```
+
+Warum über den eigenen Server statt direkt vom Gerät: ein einziger Ausgang,
+ein Zwischenspeicher auf der Platte, Höflichkeit gegenüber den freien
+Kachelservern, und ein Stilwechsel bleibt eine Zeile. Ausführlich in
+`src/http/karte.js`.
+
+Der Stil ist **CARTO Voyager** — von den frei nutzbaren Stilen der, der dem
+Bild von Google Maps am nächsten kommt: heller entsättigter Grund, farbige
+Straßen nach Rang, grüne Parks, zurückhaltende Beschriftung. Googles eigene
+Kacheln sind ohne deren SDK und ein Bezahlkonto nicht zu haben.
+
+Kommt keine Kachel durch, zeichnet der Server eine (`src/http/kachelbild.js`,
+ein PNG von Hand). Eine Karte mit vierzig kaputten Bildsymbolen sieht
+schlimmer aus als eine leere.
+
+---
+
+## Die Daten
+
+360 echte Betriebe aus OpenStreetMap in drei Gegenden:
+
+| Gegend | Umkreis |
+|---|---|
+| Alcossebre (ES) | 25 km |
+| 77836 Rheinmünster | 30 km |
+| 77704 Oberkirch | 30 km |
 
 ```bash
-curl http://localhost:4000/api/health
-curl http://localhost:4000/api/places
-curl http://localhost:4000/api/g/trattoria-bella/speisekarte
-
-# Anmelden und den Zugang merken
-TOKEN=$(curl -s -X POST http://localhost:4000/api/auth/login \
-  -H 'content-type: application/json' \
-  -d '{"identifier":"ana@intern","password":"Admin1234"}' | grep -o '"token": "[^"]*' | cut -d'"' -f4)
-
-# Was liegt in der Freigabe?
-curl -s -X POST http://localhost:4000/api/rpc \
-  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
-  -d '{"method":"videos.pending"}'
+npm run testdaten           # holt sie neu (braucht Zugang zu Overpass)
+npm run testdaten:pruefen   # 11 Prüfungen auf dem, was da ist
 ```
 
-Ohne Anmeldung dasselbe versuchen — es kommt `401`. Das ist der Punkt: Die
-Rechte hängen am Server, nicht an der Oberfläche.
+Vom Handy aus: **Actions → „Testdaten holen"**.
 
-## Zugänge
+**Keine übernommenen Bewertungen.** Weder von Google noch von sonst woher —
+eine fremde Sternezahl sagt nichts darüber, was bewertet wurde, und ließe
+sich nicht nachvollziehen. `tools/orte-pruefen.mjs` prüft, dass keine
+hereinkommt.
 
-Alles erfunden, alles nur in `data/db.json`.
+**Bilder** nur aus freien Quellen (OpenStreetMap `image`, Wikimedia Commons),
+und dann mit Nennung. Für alle anderen zeichnet der Server eines.
 
-| Rolle | E-Mail | Passwort |
+`src/data/anreicherung.js` legt Beschreibungen über die importierten Daten —
+in eigenen Worten, mit Quelle und Datum, und ohne Speisekarten mit Preisen.
+Warum nicht, steht oben in der Datei.
+
+---
+
+## Konten
+
+Kein Beispielinhalt mehr. Im Ausgangsbestand stehen die Betriebe und drei
+Zugänge — sonst nichts. Der Feed ist am Anfang leer; so sieht jede Anwendung
+am ersten Tag aus.
+
+| Rolle | Anmeldung | Passwort |
 |---|---|---|
-| Nutzer | `max@beispiel.de` | `Passwort123` |
-| Nutzer | `lisa@beispiel.de` | `Passwort123` |
-| Gastro | `chef@trattoria-bella.de` | `Gastro123` |
-| Gastro (erstes Login) | `hallo@morgenrot-cafe.de` | `Start1234` |
-| Admin | `ana@intern` | `Admin1234` |
+| Verwaltung | `topic` | `admin` |
+| Gastro | `test@gastro.de` | `12345aA?` |
+| Nutzer | `test@user.de` | `12345aA?` |
 
-## Aufbau
+> **`admin` ist kein Passwort, sondern ein Platzhalter.** Es steht in jeder
+> Wortliste, die es gibt. Der Server erinnert bei jedem Start daran, solange
+> es gilt. Bevor echte Menschen Konten anlegen, muss es weg.
 
-```
-src/
-  index.js               Start: Datei-Datenhaltung + Server
-  data/seed.js           Ausgangsdaten (10 Betriebe, Karten, Videos, Konten)
-  domain/                ► die Fachlogik. Synchron, ohne Netz, ohne Browser.
-    store.js             der eingehängte Datenzugriff
-    derive.js            abgeleitete Werte (Bewertungen, Entfernung, Öffnung)
-    places.js menu.js videos.js reviews.js social.js users.js
-    notifications.js reports.js admin.js search.js gastro.js auth.js
-    geo.js hours.js
-  store/file-store.js    Datenhaltung in data/db.json
-  http/
-    server.js            HTTP, CORS, Leseadressen
-    rpc.js               ► die Aufrufliste mit den Rechten
-    tokens.js            Sitzungen
-test/smoke.mjs           npm test
-```
+Für die importierten Betriebe wird **kein** Konto angelegt. Wer einen davon
+führt, meldet sich über „Betrieb übernehmen" — dann steht am Konto auch, dass
+es geprüft wurde.
 
-### Warum ein Eingang statt vieler Adressen?
+---
 
-`POST /api/rpc` nimmt `{ method, args }` und ruft genau eine Funktion aus der
-Liste in [`src/http/rpc.js`](src/http/rpc.js) auf. Kein Aufruf, der dort nicht
-steht, ist möglich, und zu jedem steht dabei, wer ihn machen darf:
+## Vom Handy aus
 
-```js
-'menu.addDish': {
-  who: 'gastro',
-  guard: (ctx, [placeId]) => ownsPlace(ctx, placeId),
-  call: (ctx, [placeId, categoryId, dish]) => domain.menu.addDish(placeId, categoryId, dish),
-},
+**Actions → „Server über ngrok"** startet den Server und macht ihn erreichbar.
+Die Adresse steht danach in der Zusammenfassung des Laufs.
+
+Die Datenbank wird am Ende als Artefakt abgelegt und beim nächsten Lauf
+wieder eingespielt — Konten und Beiträge bleiben also von Lauf zu Lauf
+erhalten. Grenzen und Vorbehalte stehen oben in
+`.github/workflows/server-ngrok.yml`; die wichtigste: Wer das Repository
+lesen darf, kann das Artefakt herunterladen.
+
+Einmalig einzurichten: Secret `NGROK_AUTHTOKEN`.
+Optional: Variable `NGROK_DOMAIN` für eine feste Adresse.
+
+---
+
+## Prüfen
+
+```bash
+npm test
 ```
 
-Das ist die Stelle, an der später die Row-Level-Security von Supabase steht.
-Bis dahin gilt: **Was hier nicht erlaubt ist, geht nicht** — egal, was die
-Oberfläche anbietet.
-
-Daneben gibt es ein paar Leseadressen (`/api/places`, `/api/g/:slug`,
-`/api/g/:slug/speisekarte`), damit man mit dem Browser nachsehen kann.
-
-### Die Fachlogik liegt hier, nicht in der Website
-
-`src/domain/` ist die einzige Quelle. Die Website spielt sich denselben Ordner
-ein (`npm run sync:domain` dort) und hängt statt der Datei den Browserspeicher
-ein. So läuft die Website auch ohne diesen Server — mit demselben Verhalten.
-
-## Was noch fehlt
-
-- **Echte Datenbank.** `data/db.json` ist eine Datei. PostgreSQL mit PostGIS
-  kommt, wenn die Umkreissuche nicht mehr im Arbeitsspeicher rechnen soll.
-- **Passwort-Hashing.** Die Passwörter stehen im Klartext. Beim Umzug auf
-  einen Anmeldedienst fällt `domain/auth.js` weg.
-- **Dateien.** Videos und Bilder liegen nirgends.
-- **OpenStreetMap-Import.** Die zehn Betriebe sind erfunden. Der Overpass-
-  Import ist der nächste große Schritt.
+| Datei | Prüft |
+|---|---|
+| `test/smoke.mjs` | Adressen, Rechte, ein Ablauf von Anfang bis Ende — legt sich seine Daten selbst an |
+| `test/datenbank.mjs` | Ob alles den Neustart übersteht. Der Server wird dafür wirklich heruntergefahren |
+| `test/karte.mjs` | Kacheln, Zwischenspeicher, Marker im Ausschnitt |

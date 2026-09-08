@@ -1,6 +1,15 @@
 /**
  * Entfernungen und die Umrechnung auf die Übersichtskarte.
  *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/derive.js         hängt distanceKm an jeden Betrieb          │
+ * │  src/domain/videos.js         schneidet den Feed nach Umkreis            │
+ * │  src/domain/places.js         Filter „im Umkreis von …"                  │
+ * │  tools/osm-import.mjs         hat dieselbe Formel noch einmal — bewusst: │
+ * │                               das Werkzeug soll ohne Fachlogik laufen    │
+ * │  Website-/src/lib/map.js      rechnet Marker in Bildpunkte um            │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
  * Solange keine echte Kartenbibliothek eingebunden ist, zeichnet die
  * Kartenansicht die Betriebe als Punkte auf eine Fläche. Die Rechnung hier
  * ist dieselbe, die später MapLibre übernimmt — nur ohne Kacheln.

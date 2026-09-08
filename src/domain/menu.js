@@ -1,6 +1,20 @@
 import { db, insert, nextId, patch, remove, update } from './store.js'
 import { dishRatingOf } from './derive.js'
 
+/**
+ * Speisekarte: Kategorien und Gerichte.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    menu.* — Ändern nur für den eigenen Betrieb      │
+ * │  src/domain/derive.js   dishRatingOf — wie ein Gericht bewertet wurde    │
+ * │  src/domain/search.js   sucht auch in Gerichten                          │
+ * │  src/http/server.js     GET /api/g/:slug/speisekarte                     │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Preise stehen in Cent, nie als Kommazahl. 19,90 € sind 1990 — mit
+ * Fließkomma wären es irgendwann 19,900000000000002.
+ */
+
 /** Die Speisekarte eines Betriebs, nach Kategorien gegliedert. */
 export function get(placeId) {
   const data = db()

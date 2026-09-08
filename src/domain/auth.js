@@ -1,5 +1,6 @@
 import { db, insert, nextId, patch, pruefePasswort, setzePasswort } from './store.js'
 import { publicUser } from './derive.js'
+import { BENUTZERNAME } from './users.js'
 
 /**
  * Anmeldung, Registrierung, Passwort.
@@ -40,8 +41,11 @@ export function login(identifier, password) {
   return { ok: true, user: publicUser(user), mustChangePassword: !!user.mustChangePassword }
 }
 
-/** Prüft, ob E-Mail und Benutzername noch frei sind. */
+/** Prüft, ob der Benutzername die Form hat und E-Mail wie Name noch frei sind. */
 export function canRegister({ email, username }) {
+  if (!BENUTZERNAME.test(String(username ?? '').trim().toLowerCase())) {
+    return { ok: false, error: 'invalidUsername' }
+  }
   const taken = db().users.find(
     (u) => u.email.toLowerCase() === String(email).toLowerCase()
       || u.username.toLowerCase() === String(username).toLowerCase(),

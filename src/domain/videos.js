@@ -3,6 +3,22 @@ import { decorateVideo } from './derive.js'
 import * as notifications from './notifications.js'
 import * as admin from './admin.js'
 
+/**
+ * Videos: Feed, Freigabe, Sichtbarkeit.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js         videos.feed / create / moderate / …         │
+ * │  src/domain/derive.js        hängt Betrieb, Autor und Bewertung an       │
+ * │  src/domain/notifications.js meldet Freigabe und Ablehnung               │
+ * │  src/domain/admin.js         schreibt jede Entscheidung ins Protokoll    │
+ * │  src/domain/reviews.js       eine Bewertung kann an einem Video hängen   │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Jedes Video geht vor der Veröffentlichung durch die Freigabe (Konzept 8.9).
+ * Deshalb ist der Feed am ersten Tag leer und bleibt es, bis jemand etwas
+ * hochlädt und jemand anderes es freigibt.
+ */
+
 const today = () => new Date().toISOString().slice(0, 10)
 
 /**

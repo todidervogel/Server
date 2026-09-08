@@ -2,6 +2,28 @@ import { db, patch, remove, update } from './store.js'
 import { publicUser } from './derive.js'
 import * as admin from './admin.js'
 
+/**
+ * Nutzerprofile.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js   users.byId / byUsername / save / exportData / …   │
+ * │  src/domain/auth.js    legt Konten an, prüft Benutzernamen mit BENUTZERNAME │
+ * │  src/domain/derive.js  publicUser — was davon öffentlich ist             │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+
+/**
+ * Die Form eines Benutzernamens: 3 bis 20 Zeichen, Kleinbuchstaben, Ziffern,
+ * Punkt und Unterstrich. Kein Bindestrich — der sieht in `@name-teil` aus wie
+ * ein Trennstrich und liest sich in Sätzen falsch.
+ *
+ * Die Regel steht hier und nicht nur im Formular der Website. Eine Regel, die
+ * nur der Browser kennt, ist keine Regel: Wer den Aufruf direkt schickt,
+ * käme daran vorbei. Und ein Ausgangsbestand, der die eigene Regel bricht,
+ * fällt so beim ersten Test auf statt beim ersten Nutzer.
+ */
+export const BENUTZERNAME = /^[a-z0-9._]{3,20}$/
+
 const nowIso = () => new Date().toISOString().slice(0, 19)
 
 export function byUsername(username, viewerId) {
@@ -22,10 +44,15 @@ const EDITABLE = ['name', 'bio', 'website', 'private', 'radius', 'notify', 'user
 export function save(id, changes) {
   const allowed = Object.fromEntries(Object.entries(changes).filter(([key]) => EDITABLE.includes(key)))
 
-  /* Benutzernamen gibt es nur einmal. */
   if (allowed.username) {
-    const taken = db().users.some((u) => u.id !== id && u.username.toLowerCase() === String(allowed.username).toLowerCase())
+    const name = String(allowed.username).trim().toLowerCase()
+    if (!BENUTZERNAME.test(name)) {
+      return { ok: false, error: '3–20 Zeichen, nur Kleinbuchstaben, Zahlen, Punkt und Unterstrich.' }
+    }
+    /* Benutzernamen gibt es nur einmal. */
+    const taken = db().users.some((u) => u.id !== id && u.username.toLowerCase() === name)
     if (taken) return { ok: false, error: 'Dieser Benutzername ist schon vergeben.' }
+    allowed.username = name
   }
 
   patch('users', id, allowed)

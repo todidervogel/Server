@@ -16,6 +16,8 @@
  */
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+/* Dieselbe Regel wie beim Laden — siehe src/data/zustand.js. */
+import { nameUndZustand } from '../src/data/zustand.js'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null }
@@ -313,28 +315,6 @@ const kategorieName = (k) => ({
   restaurant: 'Restaurant', cafe: 'Café', imbiss: 'Imbiss',
   bar: 'Bar', baeckerei: 'Bäckerei', sonstiges: 'Sonstiges',
 }[k])
-
-/*
- * Manche Betriebe tragen ihren Zustand im Namen: „Lempert (dauerhaft
- * geschlossen)", „Café Stollhofen (vorrübergehend Gesschlossen)". In OSM ist
- * das üblich, auf einer Betriebsseite sieht es nach einem Fehler aus — und die
- * Anwendung hat für genau das ein Feld.
- *
- * Der Tippfehler „Gesschlossen" steht wirklich so in den Daten. Deshalb wird
- * großzügig gesucht statt auf genaue Schreibweise gehofft.
- */
-const ZUSATZ = /\s*[([]\s*[^)\]]*?(geschlossen|gesschlossen|closed|cerrado|permanentemente|dauerhaft|vorüber|vorrüber|renovier|umbau)[^)\]]*[)\]]\s*/i
-const DAUERHAFT = /dauerhaft|permanent|closed_permanently|cerrado permanentemente/i
-
-function nameUndZustand(roher) {
-  const treffer = ZUSATZ.exec(roher)
-  if (!treffer) return { name: roher.trim(), status: 'active' }
-  const name = roher.replace(ZUSATZ, ' ').replace(/\s+/g, ' ').trim()
-  return {
-    name: name || roher.trim(),
-    status: DAUERHAFT.test(treffer[0]) ? 'closed' : 'closed_reported',
-  }
-}
 
 function umbauen(element, gegend, vergeben) {
   const tags = element.tags ?? {}

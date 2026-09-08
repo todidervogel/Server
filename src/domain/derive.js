@@ -5,6 +5,12 @@ import { openLabel } from './hours.js'
 /**
  * Abgeleitete Werte.
  *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  fast jede Datei in src/domain/   decoratePlace, decorateVideo, publicUser│
+ * │  src/domain/geo.js                für die Entfernung                     │
+ * │  src/domain/hours.js              für „jetzt geöffnet"                   │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
  * Durchschnittsbewertungen, Videoanzahl, Entfernung und Öffnungsstatus stehen
  * nicht in den Daten, sondern werden bei jeder Abfrage berechnet. Auf einer
  * echten Datenbank wäre das eine Sicht („materialized view"); hier ist es eine

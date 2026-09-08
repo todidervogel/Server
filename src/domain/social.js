@@ -2,6 +2,20 @@ import { db, insert, remove } from './store.js'
 import { decoratePlace, decorateVideo } from './derive.js'
 import * as notifications from './notifications.js'
 
+/**
+ * Gefällt mir, Merkzettel, Folgen.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    social.* — alles nur angemeldet                  │
+ * │  src/domain/derive.js   viewerLiked / viewerSaved / viewerFollow         │
+ * │  src/domain/users.js    räumt beim Löschen eines Kontos auf              │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Die Kennung kommt immer aus der Sitzung, nie aus dem Aufruf. In calls.js
+ * steht deshalb `(ctx, [, videoId])` — der erste Wert wird weggeworfen. Sonst
+ * könnte jeder in fremdem Namen liken; der Rauchtest prüft genau das.
+ */
+
 export function isLiked(userId, videoId) {
   return db().likes.some((l) => l.userId === userId && l.videoId === videoId)
 }

@@ -2,6 +2,21 @@ import { db, insert, nextId, patch } from './store.js'
 import { decorateReview } from './derive.js'
 import * as notifications from './notifications.js'
 
+/**
+ * Bewertungen.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    reviews.byPlace / create / answer / like         │
+ * │  src/domain/derive.js   rechnet daraus die Durchschnitte je Betrieb      │
+ * │  src/domain/videos.js   hängt die Bewertung an ihr Video                 │
+ * │  src/domain/users.js    anonymisiert sie beim Löschen des Kontos         │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Drei Achsen — Essen, Service, Preis — und sie bleiben getrennt. Eine
+ * Gesamtnote wäre bequemer und würde genau das verstecken, worauf es ankommt:
+ * dass „gutes Essen, lahmer Service" etwas anderes ist als „mittelmäßig".
+ */
+
 const today = () => new Date().toISOString().slice(0, 10)
 const star = (value) => {
   const n = Number(value)

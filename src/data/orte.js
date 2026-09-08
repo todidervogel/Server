@@ -15,7 +15,7 @@ export const gegenden = [
   {
     "gegend": "Rheinmünster",
     "umkreis": 30,
-    "anzahl": 120
+    "anzahl": 119
   },
   {
     "gegend": "Oberkirch",
@@ -4004,7 +4004,7 @@ export const betriebe = [
   {
     "id": "osm-n5809229461",
     "slug": "cafe-stollhofen-vorruebergehend-gesschlossen",
-    "name": "Café Stollhofen (vorrübergehend Gesschlossen)",
+    "name": "Café Stollhofen",
     "osmId": "node/5809229461",
     "cuisine": "Café",
     "tags": [
@@ -4029,7 +4029,7 @@ export const betriebe = [
     "verified": false,
     "claimStatus": "unclaimed",
     "claimedBy": null,
-    "status": "active",
+    "status": "closed_reported",
     "hasCover": false
   },
   {
@@ -4086,36 +4086,6 @@ export const betriebe = [
     "country": "DE",
     "region": "rheinmuenster",
     "phone": "+4972275656",
-    "website": "",
-    "hours": null,
-    "verified": false,
-    "claimStatus": "unclaimed",
-    "claimedBy": null,
-    "status": "active",
-    "hasCover": false
-  },
-  {
-    "id": "osm-w51828861",
-    "slug": "lempert-dauerhaft-geschlossen",
-    "name": "Lempert (dauerhaft geschlossen)",
-    "osmId": "way/51828861",
-    "cuisine": "Bäckerei",
-    "tags": [
-      "Bäckerei"
-    ],
-    "price": "€",
-    "category": "baeckerei",
-    "serving": [
-      "suesses"
-    ],
-    "lat": 48.761865,
-    "lng": 8.051625,
-    "address": "Herrenstraße 38a",
-    "zip": "77836",
-    "city": "Rheinmünster",
-    "country": "DE",
-    "region": "rheinmuenster",
-    "phone": "+49 7227 3529",
     "website": "",
     "hours": null,
     "verified": false,

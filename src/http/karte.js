@@ -34,37 +34,63 @@ import { ersatzkachel } from './kachelbild.js'
  *   4. **Ein Wechsel bleibt eine Zeile.** Wird der Stil getauscht, ändert
  *      sich hier eine Zeile und nichts in App und Website.
  *
- * ── Warum dieser Stil ─────────────────────────────────────────────────────
+ * ── Welcher Stil ──────────────────────────────────────────────────────────
  *
- * Gewünscht war „so wie Google Maps". Die Kacheln von Google selbst dürfen
- * nicht anders als über deren SDK benutzt werden, und das braucht ein
- * Bezahlkonto. „Voyager" von CARTO ist der Stil, der demselben Bild am
- * nächsten kommt: heller, entsättigter Grund, farbige Straßen nach Rang,
- * grüne Parks, blaues Wasser, zurückhaltende Beschriftung. Die Daten sind
- * dieselben wie überall: OpenStreetMap.
+ * Der **gewöhnliche OpenStreetMap-Stil** — der, den man auf openstreetmap.org
+ * sieht, wenn man nichts umstellt. Ausdrücklich so bestellt, und ausdrücklich
+ * **nicht** die Verkehrsansicht, die Bahnlinien und Haltestellen betont.
  *
- * Weltweit ist das ohnehin: Es gibt keine Gegend ohne Kacheln.
+ * Zu Google Maps: Deren Kacheln dürfen nur über deren SDK benutzt werden und
+ * brauchen ein Bezahlkonto. Wer ein helleres, entsättigtes Bild will, das dem
+ * näherkommt, startet den Server mit `KARTE_STIL=voyager` — dann kommen die
+ * Kacheln von CARTO. Umgestellt wird damit nur eine Umgebungsvariable, nicht
+ * eine Zeile Code, und die Namensnennung wandert mit.
+ *
+ * Weltweit ist beides: Es gibt keine Gegend ohne Kacheln.
  */
 
 const hier = dirname(fileURLToPath(import.meta.url))
 
 /* --- Der Stil -------------------------------------------------------------- */
 
-const STIL = {
-  name: 'voyager',
-  /*
-   * Die Adressen der Reihe nach. Kommt von der ersten nichts, wird die nächste
-   * gefragt — der letzte Eintrag ist der Standardstil von OpenStreetMap, der
-   * sieht anders aus, ist aber immer da.
-   */
-  quellen: [
-    'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-    'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-  ],
-  nennung: '© OpenStreetMap-Mitwirkende, © CARTO',
-  maxZoom: 19,
+/**
+ * Die Kartenstile.
+ *
+ * `standard` ist der gewöhnliche OpenStreetMap-Stil — der, den man auf
+ * openstreetmap.org sieht, wenn man nichts umstellt. Er ist der Standard hier,
+ * weil er so ausdrücklich bestellt wurde: **nicht** die Verkehrs- oder
+ * ÖPNV-Ansicht, die Bahnlinien und Haltestellen betont.
+ *
+ * `voyager` ist heller und entsättigter und kommt dem Bild von Google Maps
+ * näher. Er bleibt als Wahl stehen, ohne der Standard zu sein.
+ *
+ * Umstellen ohne Codeänderung:
+ *
+ *     KARTE_STIL=voyager node src/index.js
+ */
+const STILE = {
+  standard: {
+    name: 'standard',
+    quellen: [
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+    nennung: '© OpenStreetMap-Mitwirkende',
+    maxZoom: 19,
+  },
+  voyager: {
+    name: 'voyager',
+    quellen: [
+      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    ],
+    nennung: '© OpenStreetMap-Mitwirkende, © CARTO',
+    maxZoom: 19,
+  },
 }
+
+const STIL = STILE[process.env.KARTE_STIL] ?? STILE.standard
 
 /*
  * Wer die Kacheln holt. Beide Anbieter weisen Anfragen ohne Kennung ab, und

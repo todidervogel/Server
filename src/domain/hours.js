@@ -1,6 +1,13 @@
 /**
  * Öffnungszeiten.
  *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/derive.js                 „jetzt geöffnet" an jedem Betrieb  │
+ * │  src/domain/places.js                 Filter „nur was offen hat"         │
+ * │  Website-/src/lib/hours-text.js       macht Sätze daraus                 │
+ * │  tools/osm-import.mjs                 liest OSM-Zeiten in dieses Format  │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
  * Gespeichert werden Minuten seit Mitternacht, Werte über 24:00 laufen in den
  * nächsten Tag hinein (eine Bar, die um 3 Uhr schließt, steht als 27:00).
  * Damit lässt sich „jetzt geöffnet" wirklich ausrechnen.

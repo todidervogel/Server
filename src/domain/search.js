@@ -1,6 +1,16 @@
 import { db, update } from './store.js'
 import { decoratePlace, dishRatingOf, publicUser } from './derive.js'
 
+/**
+ * Suche über Gerichte, Betriebe, Orte und Profile.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js    search.run / popular / history / remember        │
+ * │  src/domain/derive.js   dekoriert die Treffer                            │
+ * │  src/data/seed.js       rechnet die häufigen Begriffe aus den Daten      │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+
 /** Vier Reiter über einer Abfrage (Konzept 8.8). */
 export function run(query, { position, viewerId } = {}) {
   const data = db()
@@ -29,6 +39,19 @@ export function run(query, { position, viewerId } = {}) {
     .map((u) => publicUser(u, data, viewerId))
 
   return { dishes, places: matchedPlaces, locations, profiles }
+}
+
+/**
+ * Häufige Suchbegriffe.
+ *
+ * Stand früher als feste Liste im Ausgangsbestand und war damit eine
+ * Behauptung: „Sonntagsbrunch" war beliebt, obwohl es niemand gesucht hatte.
+ * Jetzt kommt die Liste aus den Daten (src/data/seed.js rechnet sie beim
+ * ersten Start aus den Küchen der vorhandenen Betriebe) — jeder Vorschlag
+ * führt also zu Treffern.
+ */
+export function popular() {
+  return db().searchPopular ?? []
 }
 
 export function history() {

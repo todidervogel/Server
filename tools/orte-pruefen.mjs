@@ -89,6 +89,19 @@ const mitFremdbewertung = betriebe.flatMap((b) => BEWERTUNGSFELDER.filter((feld)
 pruefe('Keine übernommenen Bewertungen', mitFremdbewertung.length === 0,
   [...new Set(mitFremdbewertung)].join(', '))
 
+/*
+ * Kein Betrieb, den es nicht mehr gibt.
+ *
+ * OpenStreetMap kennt kein Feld dafür und schreibt es in den Namen —
+ * „Lempert (dauerhaft geschlossen)". src/data/zustand.js trennt das ab und
+ * wirft dauerhaft Geschlossene aus dem Bestand. Diese Prüfung sieht nach, ob
+ * im Import noch etwas übrig ist.
+ */
+const { ZUSATZ } = await import('../src/data/zustand.js')
+const mitHinweis = betriebe.filter((b) => ZUSATZ.test(b.name))
+pruefe('Kein Schließungshinweis im Namen', mitHinweis.length === 0,
+  mitHinweis.slice(0, 3).map((b) => b.name).join(' | '))
+
 /* Bilder: nur aus freien Quellen, und dann mit Nennung. */
 const bilderOhneQuelle = betriebe.filter((b) => b.bildUrl && !b.bildQuelle)
 pruefe('Jedes Bild nennt seine Quelle', bilderOhneQuelle.length === 0,

@@ -87,6 +87,18 @@ const weitWeg = await api('/api/places?lat=-33.87&lng=151.21&radiusKm=5')
 check('Am anderen Ende der Welt ist nichts in der Nähe', weitWeg.body.result.length === 0,
   `${weitWeg.body.result.length} gefunden`)
 
+/*
+ * Der Ausgangsbestand muss die eigenen Regeln einhalten. Das klingt
+ * selbstverständlich und war es nicht: Die bestellten Konten hießen zuerst
+ * `test-user` und `test-gastro` — mit Bindestrich, den die Regel für
+ * Benutzernamen nicht zulässt. Anmelden ging, aber sobald jemand sein Profil
+ * speicherte, wies das Formular den eigenen Namen zurück.
+ */
+const { BENUTZERNAME } = await import('../src/domain/users.js')
+check('Alle Konten im Bestand halten die Regel für Benutzernamen ein',
+  store.get().users.every((u) => BENUTZERNAME.test(u.username)),
+  store.get().users.filter((u) => !BENUTZERNAME.test(u.username)).map((u) => u.username).join(', '))
+
 /* --- Anmeldung ----------------------------------------------------------- */
 const wrong = await api('/api/auth/login', { method: 'POST', body: { identifier: 'test@user.de', password: 'falsch' } })
 check('Falsches Passwort wird abgewiesen', wrong.status === 401)
@@ -99,7 +111,7 @@ const adminToken = await login('topic', 'admin')
 check('Anmeldung als Gastro und Verwaltung', !!gastroToken && !!adminToken)
 
 const me = await api('/api/auth/me', { token: userToken })
-check('Eigenes Konto abrufbar', me.body.user.username === 'test-user')
+check('Eigenes Konto abrufbar', me.body.user.username === 'test_user')
 check('Passwort wird nie mitgeliefert', !JSON.stringify(me.body).includes('12345aA?'))
 
 /* --- Verifizierung darf übersprungen werden (MVP) ------------------------ */
@@ -199,7 +211,7 @@ const fremdeKennung = await rpc('social.toggleLike', ['a1', videoId], userToken)
 check('Fremde Kennung wird ignoriert',
   fremdeKennung.status === 200 && !store.get().likes.some((l) => l.userId === 'a1'))
 
-const eigenesProfil = await rpc('users.byUsername', ['test-user'], userToken)
+const eigenesProfil = await rpc('users.byUsername', ['test_user'], userToken)
 check('Folgen-Zustand reist am Profil mit', ['none', 'pending', 'accepted'].includes(eigenesProfil.body.result.viewerFollow))
 
 /* --- Datenschutz --------------------------------------------------------- */
