@@ -82,6 +82,21 @@ Sätze sind der eigentliche Wert der Kommentare.
 | `Brain/02-technik/` | wenn sich Architektur, Datenmodell oder Zugänge ändern |
 | `README.md` des Repos | wenn sich ändert, wie man es benutzt |
 
+### 5. Vor der Arbeit einen Sicherungszweig anlegen
+
+Jede Runde beginnt mit einem Zweig, der den Stand *vorher* festhält, in allen
+fünf Repositories:
+
+```bash
+git push origin main:backup/vor-runde-<nummer>-<datum>
+```
+
+Warum: Die Arbeit läuft auf einem Rechner, der nach der Sitzung verschwindet.
+Ein Zweig auf GitHub überlebt das. Wenn eine Runde etwas kaputt macht, ist der
+Weg zurück ein Klick und keine Rekonstruktion.
+
+Der Zweig wird nie gelöscht und nie überschrieben. Er kostet nichts.
+
 ## Sprache
 
 Deutsch, in ganzen Sätzen, ohne lange Gedankenstriche. Sie wirken maschinell.

@@ -139,14 +139,28 @@ export function createApiServer({ store, log = console.log }) {
       const lng = zahl('lng')
       const position = Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : undefined
 
+      /*
+       * Obergrenze, seit die Fläche dazugekommen ist.
+       *
+       * Ohne Umkreis liefert diese Adresse sonst jeden Betrieb, den der Server
+       * kennt. Bei den drei Kern-Gegenden waren das 359 und ein paar hundert
+       * Kilobyte; mit ganz Deutschland sind es zwölftausend und zweistellige
+       * Megabyte, über Mobilfunk an ein Handy. Wer wirklich alles will, setzt
+       * `limit` hoch.
+       */
+      const grenze = zahl('limit')
+      const alle = domain.places.list({
+        position,
+        radiusKm: zahl('radiusKm'),
+        query: url.searchParams.get('q') ?? undefined,
+      })
+      const wieViele = Number.isFinite(grenze) ? Math.min(Math.max(grenze, 1), 5000) : 500
+
       return {
         status: 200,
         body: {
-          result: domain.places.list({
-            position,
-            radiusKm: zahl('radiusKm'),
-            query: url.searchParams.get('q') ?? undefined,
-          }),
+          result: alle.slice(0, wieViele),
+          ...(alle.length > wieViele ? { gesamt: alle.length, gekuerzt: true } : {}),
         },
       }
     },

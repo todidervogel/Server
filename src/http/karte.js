@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync, readdirSy
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ersatzkachel } from './kachelbild.js'
+import { einfaerben, kennt, STILE } from './kartenstil.js'
 
 /**
  * Die Karte, serverseitig.
@@ -9,6 +10,7 @@ import { ersatzkachel } from './kachelbild.js'
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
  * │  src/http/server.js            hängt die Adressen ein                    │
  * │  src/http/kachelbild.js        zeichnet den Ersatz, wenn nichts kommt    │
+ * │  src/http/kartenstil.js        färbt die Kacheln um, unser eigener Stil  │
  * │  src/domain/places.js          liefert die Betriebe für die Marker       │
  * │  Website-/src/components/MapTiles.jsx   holt die Kacheln von hier        │
  * └──────────────────────────────────────────────────────────────────────────┘
@@ -34,19 +36,32 @@ import { ersatzkachel } from './kachelbild.js'
  *   4. **Ein Wechsel bleibt eine Zeile.** Wird der Stil getauscht, ändert
  *      sich hier eine Zeile und nichts in App und Website.
  *
- * ── Welcher Stil ──────────────────────────────────────────────────────────
+ * ── Welche Kacheln ────────────────────────────────────────────────────────
  *
- * Der **gewöhnliche OpenStreetMap-Stil**, der, den man auf openstreetmap.org
- * sieht, wenn man nichts umstellt. Ausdrücklich so bestellt, und ausdrücklich
- * **nicht** die Verkehrsansicht, die Bahnlinien und Haltestellen betont.
+ * `tile.openstreetmap.org`, der **gewöhnliche Standardstil**, der, den man auf
+ * openstreetmap.org sieht, wenn man nichts umstellt.
  *
- * Zu Google Maps: Deren Kacheln dürfen nur über deren SDK benutzt werden und
- * brauchen ein Bezahlkonto. Wer ein helleres, entsättigtes Bild will, das dem
- * näherkommt, startet den Server mit `KARTE_STIL=voyager`, dann kommen die
- * Kacheln von CARTO. Umgestellt wird damit nur eine Umgebungsvariable, nicht
- * eine Zeile Code, und die Namensnennung wandert mit.
+ * Ausdrücklich **nicht** `tile.openstreetmap.de`. Das ist der deutsche Stil:
+ * eigene Farben, deutsche Beschriftungen, andere Gewichtung. Wer ihn will,
+ * trägt ihn unten als eigene Quelle ein; von selbst kommt er nie.
  *
- * Weltweit ist beides: Es gibt keine Gegend ohne Kacheln.
+ * Ausdrücklich auch nicht die Verkehrsansicht, die Bahnlinien und
+ * Haltestellen betont.
+ *
+ * ── Und unser eigener Stil darüber ────────────────────────────────────────
+ *
+ * Die Kacheln kommen als fertige Bilder. Farbe können wir trotzdem selbst
+ * bestimmen: `src/http/kartenstil.js` färbt jede Kachel um, bevor sie
+ * ausgeliefert wird, nach ein paar Zahlen, die dort zum Ändern stehen.
+ *
+ *     KARTE_STIL=ruhig node src/index.js     heller und entsättigt
+ *     KARTE_STIL=dunkel node src/index.js    für den Dunkelmodus
+ *
+ * Voreingestellt ist `roh`, also unverändert. Was damit **nicht** geht,
+ * nämlich Straßen und Beschriftungen ändern, und was es dafür bräuchte, steht
+ * in docs/KARTE.md.
+ *
+ * Weltweit ist das ohnehin: Es gibt keine Gegend ohne Kacheln.
  */
 
 const hier = dirname(fileURLToPath(import.meta.url))
@@ -68,7 +83,7 @@ const hier = dirname(fileURLToPath(import.meta.url))
  *
  *     KARTE_STIL=voyager node src/index.js
  */
-const STILE = {
+const QUELLEN = {
   standard: {
     name: 'standard',
     quellen: [
@@ -90,7 +105,13 @@ const STILE = {
   },
 }
 
-const STIL = STILE[process.env.KARTE_STIL] ?? STILE.standard
+const STIL = QUELLEN[process.env.KARTE_QUELLE] ?? QUELLEN.standard
+
+/*
+ * Der eigene Stil darüber. Voreingestellt `roh`, also unverändert: Wer nichts
+ * einstellt, bekommt die Karte so, wie OpenStreetMap sie zeichnet.
+ */
+const EIGENER_STIL = kennt(process.env.KARTE_STIL ?? '') ? process.env.KARTE_STIL : 'roh'
 
 /*
  * Wer die Kacheln holt. Beide Anbieter weisen Anfragen ohne Kennung ab, und
@@ -111,7 +132,13 @@ export function setKachelordner(pfad) {
   ordner = pfad
 }
 
-const kachelPfad = (z, x, y) => join(ordner, STIL.name, String(z), String(x), `${y}.png`)
+/*
+ * Je Quelle **und** je Stil ein eigener Ordner. Sonst läge unter demselben
+ * Pfad mal die rohe und mal die eingefärbte Kachel, je nachdem, womit der
+ * Server zuletzt lief.
+ */
+const kachelPfad = (z, x, y) =>
+  join(ordner, `${STIL.name}-${EIGENER_STIL}`, String(z), String(x), `${y}.png`)
 
 function ausSpeicher(pfad) {
   if (!existsSync(pfad)) return null
@@ -205,7 +232,9 @@ export async function kachel(z, x, y) {
   if (gespeichert && !gespeichert.alt) return { inhalt: gespeichert.inhalt, herkunft: 'speicher' }
 
   try {
-    const inhalt = await vomAnbieter(z, x, y)
+    const roh = await vomAnbieter(z, x, y)
+    /* Erst einfärben, dann speichern: So wird jede Kachel nur einmal gerechnet. */
+    const inhalt = einfaerben(roh, EIGENER_STIL)
     inSpeicher(pfad, inhalt)
     return { inhalt, herkunft: 'anbieter' }
   } catch (fehler) {
@@ -218,8 +247,11 @@ export async function kachel(z, x, y) {
 /** Was die Oberfläche über den Stil wissen muss. */
 export const stil = () => ({
   name: STIL.name,
+  eigenerStil: EIGENER_STIL,
   nennung: STIL.nennung,
   maxZoom: STIL.maxZoom,
   kachelGroesse: 256,
   vorlage: '/api/karte/kachel/{z}/{x}/{y}.png',
+  /* Damit die Oberfläche weiß, was einstellbar ist. */
+  stileVerfuegbar: Object.keys(STILE),
 })

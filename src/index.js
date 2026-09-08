@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { initialDatabase } from './data/seed.js'
@@ -11,6 +12,7 @@ import { createApiServer } from './http/server.js'
  *
  * ┌─ Was von hier aus zusammengesetzt wird ──────────────────────────────────┐
  * │  src/data/seed.js           der Bestand beim allerersten Start           │
+ * │  src/data/deutschland.json  die Fläche, nur hier gelesen                 │
  * │  src/store/sqlite-store.js  die Datenbank (Tabellen, Passwörter, …)      │
  * │  src/http/tokens.js         Anmeldungen, hier eingehängt                 │
  * │  src/http/server.js         die HTTP-Schnittstelle                       │
@@ -41,7 +43,31 @@ const DATEI = process.env.DATA_FILE ?? resolve(hier, '..', 'data', 'tellerrand.d
 /* Die Kacheln liegen neben der Datenbank, ein Ordner, ein Backup. */
 const KACHELN = process.env.TILE_DIR ?? resolve(dirname(DATEI), 'kacheln')
 
-const store = createSqliteStore(DATEI, initialDatabase())
+/**
+ * Die Betriebe aus ganz Deutschland.
+ *
+ * Sie liegen als JSON und nicht als Modul, damit die Weboberfläche sie nicht
+ * mitschleppt: zwölftausend Betriebe wären mehrere Megabyte, die jedes Handy
+ * bei jedem Start herunterlädt, um dann die zehn in der Nähe anzuzeigen.
+ * Warum das so aufgeteilt ist, steht in src/data/gebiete.js.
+ *
+ * Fehlt die Datei, ist das kein Fehler: Dann kennt der Server die drei
+ * Kern-Gegenden, und `npm run testdaten:de` holt den Rest.
+ */
+function flaeche() {
+  const pfad = resolve(hier, 'data', 'deutschland.json')
+  if (!existsSync(pfad)) return []
+  try {
+    const daten = JSON.parse(readFileSync(pfad, 'utf8'))
+    return daten.betriebe ?? []
+  } catch (fehler) {
+    console.warn(`[Daten] ${pfad} ließ sich nicht lesen (${fehler.message}), wird übergangen.`)
+    return []
+  }
+}
+
+const zusaetzlich = flaeche()
+const store = createSqliteStore(DATEI, initialDatabase({ zusaetzlich }))
 setSitzungen(store.sitzungen)
 setKachelordner(KACHELN)
 
@@ -54,6 +80,8 @@ server.listen(PORT, HOST, () => {
   console.log(`Kacheln       ${KACHELN}`)
   console.log(`Bestand       ${bestand.places.length} Betriebe, ${bestand.users.length} Konten, `
     + `${bestand.videos.length} Videos, ${bestand.reviews.length} Bewertungen`)
+  if (zusaetzlich.length) console.log(`              davon ${zusaetzlich.length} aus src/data/deutschland.json`)
+  else console.log('              nur die Kern-Gegenden, für die Fläche: npm run testdaten:de')
   console.log('')
   console.log('Zum Ausprobieren:')
   console.log(`  curl http://localhost:${PORT}/api/health`)

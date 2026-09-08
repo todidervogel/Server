@@ -1,6 +1,7 @@
 import { betriebe as betriebeAusOsm, geholt, quelle, gegenden } from './orte.js'
 import { anreichern } from './anreicherung.js'
 import { nurBestehende } from './zustand.js'
+import { alleVollstaendig } from './orte-laden.js'
 
 /**
  * Der Ausgangsbestand, was in der Datenbank steht, wenn sie neu ist.
@@ -73,7 +74,7 @@ export const HERKUNFT = { geholt, quelle, gegenden }
  * `nurBestehende` wirft heraus, was dauerhaft geschlossen ist: Es soll keine
  * Seite für einen Betrieb geben, den es nicht mehr gibt. Siehe zustand.js.
  */
-const betriebe = () => nurBestehende(betriebeAusOsm).map(anreichern)
+const betriebe = () => nurBestehende(alleVollstaendig(betriebeAusOsm)).map(anreichern)
 
 /* ==========================================================================
    Konten
@@ -149,6 +150,34 @@ export const locations = [
  * Ein „beliebt"-Vorschlag, der auf nichts zeigt, ist eine Sackgasse. Deshalb
  * stehen hier die Küchen, die es in den Daten wirklich am häufigsten gibt.
  */
+/**
+ * Zwei Listen zu einer, ohne Doppelte.
+ *
+ * Die Gegenden überlappen sich: Oberkirch liegt im Umkreis von Karlsruhe und
+ * Freiburg. Derselbe Betrieb darf trotzdem nur einmal in der Datenbank stehen,
+ * sonst hat er zwei Seiten und zwei Bewertungsschnitte. Es zählt die Kennung
+ * aus OpenStreetMap, und die erste gewinnt: Die Kern-Gegenden sind
+ * angereichert, die Fläche nicht.
+ */
+function zusammenfuehren(erste, zweite) {
+  if (!zweite?.length) return erste
+  const bekannt = new Set(erste.map((b) => b.id))
+  const kuerzel = new Set(erste.map((b) => b.slug))
+
+  const dazu = []
+  for (const betrieb of nurBestehende(alleVollstaendig(zweite))) {
+    if (bekannt.has(betrieb.id)) continue
+    bekannt.add(betrieb.id)
+    /* Kürzel müssen eindeutig bleiben, die Betriebsseite hängt daran. */
+    let slug = betrieb.slug
+    if (kuerzel.has(slug)) slug = `${slug}-${betrieb.id.replace(/[^a-z0-9]/gi, '').slice(-6)}`
+    if (kuerzel.has(slug)) continue
+    kuerzel.add(slug)
+    dazu.push(anreichern({ ...betrieb, slug }))
+  }
+  return [...erste, ...dazu]
+}
+
 function haeufigeKuechen(alle, anzahl = 6) {
   const zaehler = new Map()
   for (const betrieb of alle) {
@@ -164,9 +193,16 @@ function haeufigeKuechen(alle, anzahl = 6) {
    Alles zusammen
    ========================================================================== */
 
-/** So sieht die Datenbank beim ersten Start aus. */
-export function initialDatabase() {
-  const places = betriebe()
+/**
+ * So sieht die Datenbank beim ersten Start aus.
+ *
+ * @param zusaetzlich  weitere Betriebe, die der Wirt mitbringt. Der Server
+ *                     reicht damit `src/data/deutschland.json` herein, die
+ *                     Website nichts. Warum das getrennt ist, steht in
+ *                     src/data/gebiete.js.
+ */
+export function initialDatabase({ zusaetzlich = [] } = {}) {
+  const places = zusammenfuehren(betriebe(), zusaetzlich)
   return {
     users: konten(places),
     places,

@@ -1,8 +1,20 @@
 # Holt echte Betriebe aus OpenStreetMap und legt sie ins Repository.
 #
-# Starten: Repository → Actions → "Testdaten holen" → "Run workflow".
-# Danach liegen die Betriebe in src/data/orte.js und sind beim nächsten
-# Start des Servers da.
+# Starten: Repository, Actions, "Testdaten holen", "Run workflow".
+#
+# ── Zwei Gruppen ────────────────────────────────────────────────────────────
+#
+#   kern          Alcossebre, Rheinmünster, Oberkirch. Landet in
+#                 src/data/orte.js, einem Modul, das auch die Weboberfläche
+#                 mitnimmt. Damit läuft die App ohne Server.
+#
+#   deutschland   Die 91 größten Städte und Urlaubsgegenden des Landes.
+#                 Landet in src/data/deutschland.json und wird nur vom Server
+#                 gelesen. Zwölftausend Betriebe als JavaScript-Modul wären
+#                 mehrere Megabyte, die jedes Handy bei jedem Start
+#                 herunterlädt, um dann die zehn in der Nähe anzuzeigen.
+#
+# Warum getrennt, steht ausführlich in src/data/gebiete.js.
 #
 # Warum ein Workflow und kein Skript, das man von Hand startet: Es gibt keinen
 # Rechner. Und die Umgebung, in der dieses Repository entsteht, lässt Overpass
@@ -12,16 +24,20 @@ name: Testdaten holen
 on:
   workflow_dispatch:
     inputs:
+      gruppe:
+        description: 'Welche Gegenden'
+        required: true
+        default: 'kern'
+        type: choice
+        options: ['kern', 'deutschland']
       gegend:
-        description: 'Nur eine Gegend (leer = alle drei)'
+        description: 'Nur eine einzelne Gegend (Kürzel, leer = alle der Gruppe)'
         required: false
         default: ''
-        type: choice
-        options: ['', 'alcossebre', 'rheinmuenster', 'oberkirch']
       max:
-        description: 'Höchstens so viele Betriebe je Gegend'
+        description: 'Höchstens so viele Betriebe je Gegend (leer = Vorgabe der Gruppe)'
         required: false
-        default: '120'
+        default: ''
 
 permissions:
   contents: write
@@ -31,8 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     # Overpass ist ein Dienst von Freiwilligen und sagt oft „zu viele
     # Anfragen". Das Skript wartet dann und versucht es erneut, dafür
-    # braucht der Lauf Luft.
-    timeout-minutes: 45
+    # braucht der Lauf Luft. Bei „deutschland" sind es 91 Gegenden mit acht
+    # Sekunden Pause dazwischen, das dauert allein schon eine Viertelstunde.
+    timeout-minutes: 330
     steps:
       - uses: actions/checkout@v4
 
@@ -43,8 +60,9 @@ jobs:
       - name: Aus OpenStreetMap holen
         run: |
           node tools/osm-import.mjs \
+            --gruppe ${{ inputs.gruppe || 'kern' }} \
             ${{ inputs.gegend && format('--gegend {0}', inputs.gegend) || '' }} \
-            --max ${{ inputs.max || '120' }}
+            ${{ inputs.max && format('--max {0}', inputs.max) || '' }}
 
       - name: Nachsehen, ob die Daten brauchbar sind
         run: node tools/orte-pruefen.mjs
@@ -57,15 +75,29 @@ jobs:
           # Erst vormerken, dann vergleichen. `git diff` allein sieht eine Datei
           # nicht, die es vorher noch gar nicht gab, beim ersten Lauf wurden
           # die Daten deshalb geholt, geprüft und weggeworfen.
-          git add src/data/orte.js
+          # Beide möglichen Ziele vormerken, je nach Gruppe ist es eines davon.
+          git add src/data/orte.js src/data/deutschland.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo 'Nichts Neues.'
             exit 0
           fi
 
-          anzahl=$(node -e "console.log(JSON.parse(require('fs').readFileSync('src/data/orte.js','utf8')).betriebe.length)")
-          git commit -m "Testdaten aus OpenStreetMap: ${anzahl} Betriebe
+          # orte.js ist ein Modul, kein JSON. Hier stand einmal `JSON.parse`
+          # darauf, das hätte den Schritt abbrechen lassen, sobald sich wirklich
+          # etwas geändert hätte.
+          anzahl=$(node -e "
+            const { betriebe } = await import('./src/data/orte.js')
+            let n = betriebe.length
+            const fs = await import('node:fs')
+            if (fs.existsSync('src/data/deutschland.json')) {
+              n += JSON.parse(fs.readFileSync('src/data/deutschland.json','utf8')).betriebe.length
+            }
+            console.log(n)
+          " --input-type=module)
 
+          git commit -m "Betriebe aus OpenStreetMap: ${anzahl} insgesamt
+
+          Gruppe: ${{ inputs.gruppe || 'kern' }}
           Geholt von tools/osm-import.mjs. Quelle: OpenStreetMap-Mitwirkende, ODbL."
           git push
-          echo "${anzahl} Betriebe eingecheckt." >> "$GITHUB_STEP_SUMMARY"
+          echo "${anzahl} Betriebe eingecheckt (Gruppe ${{ inputs.gruppe || 'kern' }})." >> "$GITHUB_STEP_SUMMARY"

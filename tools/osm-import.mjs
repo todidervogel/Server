@@ -1,9 +1,10 @@
 /**
  * Holt echte Betriebe aus OpenStreetMap und schreibt sie als Beispieldaten.
  *
- *   node tools/osm-import.mjs                     alle Gegenden
- *   node tools/osm-import.mjs --gegend oberkirch  nur eine
- *   node tools/osm-import.mjs --max 80            weniger je Gegend
+ *   node tools/osm-import.mjs                          die drei Kern-Gegenden
+ *   node tools/osm-import.mjs --gruppe deutschland     die Städte des Landes
+ *   node tools/osm-import.mjs --gegend oberkirch       nur eine
+ *   node tools/osm-import.mjs --max 80                 weniger je Gegend
  *
  * Warum OpenStreetMap und nicht Google Maps: Die Daten von Google dürfen laut
  * Nutzungsbedingungen nicht übernommen werden, und ohne Bezahlkonto kommt man
@@ -18,16 +19,24 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 /* Dieselbe Regel wie beim Laden, siehe src/data/zustand.js. */
 import { nameUndZustand } from '../src/data/zustand.js'
+import { GRUPPEN } from '../src/data/gebiete.js'
 
 const args = process.argv.slice(2)
 const flag = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null }
 
-/* Mittelpunkt und Umkreis, genau wie bestellt. */
-const GEGENDEN = [
-  { key: 'alcossebre', name: 'Alcossebre', land: 'ES', lat: 40.2408, lng: 0.2706, km: 25 },
-  { key: 'rheinmuenster', name: 'Rheinmünster', land: 'DE', lat: 48.7686, lng: 8.0511, km: 30 },
-  { key: 'oberkirch', name: 'Oberkirch', land: 'DE', lat: 48.5333, lng: 8.0833, km: 30 },
-]
+/*
+ * Welche Gruppe von Gegenden. `kern` sind die drei bestellten und landen als
+ * Modul in src/data/orte.js; `deutschland` sind die Städte und landen als
+ * JSON, das nur der Server liest. Warum getrennt, steht in
+ * src/data/gebiete.js.
+ */
+const gruppenName = flag('--gruppe') ?? 'kern'
+const gruppe = GRUPPEN[gruppenName]
+if (!gruppe) {
+  console.error(`Unbekannte Gruppe: ${gruppenName}. Möglich: ${Object.keys(GRUPPEN).join(', ')}`)
+  process.exit(1)
+}
+const GEGENDEN = gruppe.gegenden
 
 /* Mehrere Spiegel: Ist einer überlastet, übernimmt der nächste. */
 const SPIEGEL = [
@@ -37,7 +46,7 @@ const SPIEGEL = [
   'https://overpass-api.openstreetmap.fr/api/interpreter',
 ]
 
-const MAX = Number(flag('--max') ?? 120)
+const MAX = Number(flag('--max') ?? gruppe.standardMax)
 const nurGegend = flag('--gegend')
 
 /* --- Overpass ------------------------------------------------------------- */
@@ -483,24 +492,70 @@ if (!zusammen.length) {
 }
 
 /*
- * Als Modul, nicht als JSON.
+ * Leere Felder weglassen.
  *
- * Dieselbe Fachlogik läuft auf dem Server **und** im Browser. Eine JSON-Datei
- * müsste dort mit `node:fs` gelesen werden, das gibt es im Browser nicht, und
- * der Bau der Website brach daran ab. Ein Modul importieren beide gleich.
+ * Von den Betrieben hat gut die Hälfte keine Adresse, kein Telefon, keine
+ * Webseite und keine Öffnungszeiten. Diese Felder trotzdem zu schreiben kostet
+ * bei zwölftausend Einträgen mehrere Megabyte, die niemand liest. Beim Laden
+ * werden sie wieder ergänzt (src/data/orte-laden.js).
  */
-const ziel = resolve('src/data/orte.js')
-writeFileSync(ziel, `/**
+const LEER = { address: '', zip: '', city: '', phone: '', website: '', hours: null,
+  bildUrl: null, bildQuelle: null, bildLizenz: null, claimedBy: null,
+  claimStatus: 'unclaimed', status: 'active', hasCover: false }
+
+const knapp = (betrieb) => Object.fromEntries(
+  Object.entries(betrieb).filter(([feld, wert]) => {
+    if (wert === undefined) return false
+    if (Array.isArray(wert) && wert.length === 0) return false
+    return !(feld in LEER) || JSON.stringify(LEER[feld]) !== JSON.stringify(wert)
+  }),
+)
+
+const knappe = zusammen.map(knapp)
+const heute = new Date().toISOString().slice(0, 10)
+
+let ziel
+if (gruppe.ziel === 'modul') {
+  /*
+   * Als Modul, nicht als JSON.
+   *
+   * Dieselbe Fachlogik läuft auf dem Server **und** im Browser. Eine JSON-Datei
+   * müsste dort mit `node:fs` gelesen werden, das gibt es im Browser nicht, und
+   * der Bau der Website brach daran ab. Ein Modul importieren beide gleich.
+   */
+  ziel = resolve('src/data/orte.js')
+  writeFileSync(ziel, `/**
  * Echte Betriebe aus OpenStreetMap, erzeugt von tools/osm-import.mjs.
  *
  * NICHT VON HAND ÄNDERN. Der nächste Import überschreibt die Datei.
  * Quelle: OpenStreetMap-Mitwirkende, ODbL.
  */
-export const geholt = ${JSON.stringify(new Date().toISOString().slice(0, 10))}
+export const geholt = ${JSON.stringify(heute)}
 export const quelle = 'OpenStreetMap-Mitwirkende, ODbL'
 export const gegenden = ${JSON.stringify(bericht, null, 2)}
-export const betriebe = ${JSON.stringify(zusammen, null, 2)}
+export const betriebe = ${JSON.stringify(knappe, null, 2)}
 `)
+} else {
+  /*
+   * Als JSON, und nur für den Server.
+   *
+   * Zwölftausend Betriebe als JavaScript-Modul wären mehrere Megabyte, die
+   * jedes Handy bei jedem Start herunterlädt und auspackt, um dann die zehn in
+   * der Nähe anzuzeigen. Der Server liest die Datei mit node:fs beim Start
+   * (src/index.js), die Weboberfläche sieht sie nie.
+   *
+   * Ohne Einrückung geschrieben: Bei dieser Menge sind die Leerzeichen ein
+   * Drittel der Datei.
+   */
+  ziel = resolve('src/data/deutschland.json')
+  writeFileSync(ziel, JSON.stringify({
+    hinweis: 'Erzeugt von tools/osm-import.mjs --gruppe deutschland. Nicht von Hand ändern.',
+    geholt: heute,
+    quelle: 'OpenStreetMap-Mitwirkende, ODbL',
+    gegenden: bericht,
+    betriebe: knappe,
+  }))
+}
 
 console.log(`\n${zusammen.length} Betriebe in ${ziel}`)
 bericht.forEach((b) => console.log(`  ${b.gegend}: ${b.anzahl}${b.uebernommen ? ' (aus dem letzten Stand)' : ''}`))

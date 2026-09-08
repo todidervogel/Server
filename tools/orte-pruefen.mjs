@@ -108,6 +108,26 @@ pruefe('Jedes Bild nennt seine Quelle', bilderOhneQuelle.length === 0,
   `${bilderOhneQuelle.length} ohne`)
 
 const mitZeiten = betriebe.filter((b) => b.hours).length
+/*
+ * Die Fläche, wenn sie da ist. Sie wird nach denselben Regeln geprüft, aber
+ * getrennt gezählt: Sie liegt in einer anderen Datei und wird nur vom Server
+ * gelesen (src/data/gebiete.js sagt, warum).
+ */
+const { existsSync, readFileSync } = await import('node:fs')
+if (existsSync('src/data/deutschland.json')) {
+  const flaeche = JSON.parse(readFileSync('src/data/deutschland.json', 'utf8'))
+  const liste = flaeche.betriebe ?? []
+  pruefe('Fläche: Betriebe vorhanden', liste.length > 0, `${liste.length}`)
+  pruefe('Fläche: jeder hat einen Namen', liste.every((b) => b.name))
+  pruefe('Fläche: jeder hat eine Lage',
+    liste.every((b) => Number.isFinite(b.lat) && Number.isFinite(b.lng)))
+  pruefe('Fläche: Kennungen sind eindeutig',
+    new Set(liste.map((b) => b.id)).size === liste.length)
+  pruefe('Fläche: keine übernommenen Bewertungen',
+    liste.every((b) => BEWERTUNGSFELDER.every((feld) => !(feld in b))))
+  console.log(`\nFläche: ${liste.length} Betriebe in ${(flaeche.gegenden ?? []).length} Gegenden.`)
+}
+
 const mitBild = betriebe.filter((b) => b.bildUrl).length
 const mitAusstattung = betriebe.filter((b) => b.features?.length).length
 console.log(`\n${betriebe.length} Betriebe, ${mitAdresse} mit Adresse, ${mitZeiten} mit Öffnungszeiten, `

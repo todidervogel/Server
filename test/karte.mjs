@@ -74,18 +74,55 @@ pruefe('Ein Pfad, der keine Kachel ist, wird nicht als Bild beantwortet',
   (await fetch(`${BASIS}/api/karte/kachel/14/8512/5583.jpg`)).status === 404)
 
 /* --- Zwischenspeicher ------------------------------------------------------ */
-/* Eine Kachel von Hand hineinlegen: Sie muss von dort kommen, nicht als Ersatz. */
-mkdirSync(join(ordner, stil.name, '9', '267'), { recursive: true })
+/*
+ * Eine Kachel von Hand hineinlegen: Sie muss von dort kommen, nicht als Ersatz.
+ *
+ * Der Ordner heißt nach Quelle **und** Stil. Sonst läge unter demselben Pfad
+ * mal die rohe und mal die eingefärbte Kachel, je nachdem, womit der Server
+ * zuletzt lief.
+ */
+const kachelordner = join(ordner, `${stil.name}-${stil.eigenerStil}`, '9', '267')
+mkdirSync(kachelordner, { recursive: true })
 const erfunden = Buffer.concat([
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
   Buffer.alloc(200, 7),
 ])
-writeFileSync(join(ordner, stil.name, '9', '267', '176.png'), erfunden)
+writeFileSync(join(kachelordner, '176.png'), erfunden)
 
 const ausSpeicher = await kachel('/api/karte/kachel/9/267/176.png')
 pruefe('Eine gespeicherte Kachel wird von der Platte bedient',
   ausSpeicher.herkunft === 'speicher' && ausSpeicher.inhalt.equals(erfunden),
   `Herkunft: ${ausSpeicher.herkunft}`)
+
+/* --- Der eigene Stil -------------------------------------------------------- */
+/*
+ * Geprüft wird an einer selbst erzeugten Kachel, nicht an einer geholten: Der
+ * Anbieter ist in dieser Umgebung nicht erreichbar, und ein Test, der von
+ * fremden Servern abhängt, ist mal grün und mal rot.
+ */
+const { einfaerben, STILE } = await import('../src/http/kartenstil.js')
+const { ersatzkachel, pngLesen } = await import('../src/http/kachelbild.js')
+
+const vorlage = ersatzkachel()
+const gelesen = pngLesen(vorlage)
+pruefe('Eine PNG-Kachel lässt sich wieder auseinandernehmen',
+  gelesen?.breite === 256 && gelesen?.hoehe === 256)
+
+pruefe('Der Stil „roh" lässt die Kachel unverändert', einfaerben(vorlage, 'roh') === vorlage)
+pruefe('Ein unbekannter Stil lässt die Kachel unverändert',
+  einfaerben(vorlage, 'gibtsnichtxyz') === vorlage)
+
+const hell = pngLesen(einfaerben(vorlage, 'ruhig'))
+const dunkel = pngLesen(einfaerben(vorlage, 'dunkel'))
+const mittel = (bild) => {
+  let summe = 0
+  for (let i = 0; i < bild.punkte.length; i += 3) summe += bild.punkte[i]
+  return summe / (bild.punkte.length / 3)
+}
+pruefe('„ruhig" bleibt hell', mittel(hell) > 200, `${Math.round(mittel(hell))}`)
+pruefe('„dunkel" wird wirklich dunkel', mittel(dunkel) < 90, `${Math.round(mittel(dunkel))}`)
+pruefe('Jeder Stil kommt als gültiges PNG zurück',
+  Object.keys(STILE).every((name) => istPng(einfaerben(vorlage, name))))
 
 /* --- Der Zähler ------------------------------------------------------------ */
 /*

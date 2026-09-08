@@ -17,6 +17,7 @@
     "reset": "node -e \"require('node:fs').rmSync('data',{recursive:true,force:true});console.log('Datenbank und Kacheln entfernt, der nächste Start legt beides neu an.')\"",
     "testdaten": "node tools/osm-import.mjs",
     "testdaten:pruefen": "node tools/orte-pruefen.mjs",
-    "pruefen:vollstaendig": "node tools/vollstaendig.mjs"
+    "pruefen:vollstaendig": "node tools/vollstaendig.mjs",
+    "testdaten:de": "node tools/osm-import.mjs --gruppe deutschland"
   }
 }

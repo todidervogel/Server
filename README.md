@@ -143,10 +143,21 @@ ein Zwischenspeicher auf der Platte, Höflichkeit gegenüber den freien
 Kachelservern, und ein Stilwechsel bleibt eine Zeile. Ausführlich in
 `src/http/karte.js`.
 
-Der Stil ist **CARTO Voyager**, von den frei nutzbaren Stilen der, der dem
-Bild von Google Maps am nächsten kommt: heller entsättigter Grund, farbige
-Straßen nach Rang, grüne Parks, zurückhaltende Beschriftung. Googles eigene
-Kacheln sind ohne deren SDK und ein Bezahlkonto nicht zu haben.
+Die Kacheln kommen von `tile.openstreetmap.org`, dem **Standardstil**.
+Ausdrücklich nicht vom deutschen Stil (`tile.openstreetmap.de`) und nicht von
+der Verkehrsansicht.
+
+Darüber liegt **unser eigener Stil**: `src/http/kartenstil.js` färbt jede
+Kachel um, bevor sie ausgeliefert wird. Voreingestellt ist `roh`, also
+unverändert.
+
+```bash
+KARTE_STIL=ruhig  node src/index.js   # heller, entsättigt
+KARTE_STIL=dunkel node src/index.js   # für den Dunkelmodus
+```
+
+Ein neuer Stil ist ein Eintrag mit sechs Zahlen. Was damit geht, was nicht,
+und was ein eigener Kartenserver bräuchte: [docs/KARTE.md](docs/KARTE.md).
 
 Kommt keine Kachel durch, zeichnet der Server eine (`src/http/kachelbild.js`,
 ein PNG von Hand). Eine Karte mit vierzig kaputten Bildsymbolen sieht
@@ -163,6 +174,25 @@ schlimmer aus als eine leere.
 | Alcossebre (ES) | 25 km |
 | 77836 Rheinmünster | 30 km |
 | 77704 Oberkirch | 30 km |
+
+Dazu **ganz Deutschland**: 91 Städte und Urlaubsgegenden, die der Server
+zusätzlich lädt.
+
+| Gruppe | Wohin | Wer liest es |
+|---|---|---|
+| `kern` | `src/data/orte.js` (Modul) | Server **und** Weboberfläche |
+| `deutschland` | `src/data/deutschland.json` | nur der Server |
+
+Warum getrennt: Zwölftausend Betriebe als JavaScript-Modul wären mehrere
+Megabyte, die jedes Handy bei jedem Start herunterlädt, um dann die zehn in
+der Nähe anzuzeigen. Wer die App ohne Server benutzt, sieht die drei
+Kern-Gegenden; wer sie mit Server benutzt, sieht das ganze Land. Einzelheiten
+in `src/data/gebiete.js`.
+
+```bash
+npm run testdaten       # die drei Kern-Gegenden
+npm run testdaten:de    # die Fläche (dauert eine gute halbe Stunde)
+```
 
 ```bash
 npm run testdaten           # holt sie neu (braucht Zugang zu Overpass)

@@ -1,10 +1,11 @@
-import { deflateSync } from 'node:zlib'
+import { deflateSync, inflateSync } from 'node:zlib'
 
 /**
  * Erzeugt Kacheln selbst, für den Fall, dass keine zu bekommen sind.
  *
  * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
- * │  src/http/karte.js   wenn der Kachelserver nicht antwortet               │
+ * │  src/http/karte.js       wenn der Kachelserver nicht antwortet           │
+ * │  src/http/kartenstil.js  liest und schreibt Kacheln, um sie einzufärben  │
  * └──────────────────────────────────────────────────────────────────────────┘
  *
  * ── Warum überhaupt ───────────────────────────────────────────────────────
@@ -109,4 +110,128 @@ let fertig = null
 export function ersatzkachel() {
   fertig ??= zeichnen()
   return fertig
+}
+
+/* --- PNG lesen ------------------------------------------------------------- */
+
+/**
+ * Zerlegt ein PNG in Bildpunkte.
+ *
+ * Gebraucht, seit der Server Kacheln nicht nur ausliefert, sondern auch
+ * umfärben kann (src/http/kartenstil.js). Ohne Fremdbibliothek, aus demselben
+ * Grund wie überall hier: `npm install` soll nichts nachladen.
+ *
+ * Unterstützt wird, was Kachelserver wirklich liefern: 8 Bit je Kanal, ohne
+ * Zeilensprung, in Graustufen, Palette, RGB oder RGBA. Alles andere gibt
+ * `null` zurück, und der Aufrufer liefert die Kachel dann unverändert aus.
+ * Ein falsch entschlüsseltes Bild wäre schlimmer als ein unbearbeitetes.
+ *
+ * @returns { breite, hoehe, punkte } mit drei Bytes je Punkt, oder null
+ */
+export function pngLesen(datei) {
+  try {
+    if (datei.length < 8 || datei.readUInt32BE(0) !== 0x89504e47) return null
+
+    let pos = 8
+    let kopf = null
+    let palette = null
+    const teile = []
+
+    while (pos + 8 <= datei.length) {
+      const laenge = datei.readUInt32BE(pos)
+      const kennung = datei.toString('ascii', pos + 4, pos + 8)
+      const inhalt = datei.subarray(pos + 8, pos + 8 + laenge)
+      pos += 12 + laenge
+
+      if (kennung === 'IHDR') {
+        kopf = {
+          breite: inhalt.readUInt32BE(0),
+          hoehe: inhalt.readUInt32BE(4),
+          tiefe: inhalt[8],
+          farbtyp: inhalt[9],
+          zeilensprung: inhalt[12],
+        }
+      } else if (kennung === 'PLTE') palette = Buffer.from(inhalt)
+      else if (kennung === 'IDAT') teile.push(inhalt)
+      else if (kennung === 'IEND') break
+    }
+
+    if (!kopf || kopf.tiefe !== 8 || kopf.zeilensprung !== 0) return null
+
+    const kanaele = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[kopf.farbtyp]
+    if (!kanaele) return null
+    if (kopf.farbtyp === 3 && !palette) return null
+
+    const roh = inflateSync(Buffer.concat(teile))
+    const zeilenbreite = kopf.breite * kanaele
+    if (roh.length < kopf.hoehe * (zeilenbreite + 1)) return null
+
+    /* Filter rückgängig machen, wie es die Spezifikation beschreibt. */
+    const flach = Buffer.alloc(kopf.hoehe * zeilenbreite)
+    let quelle = 0
+    for (let y = 0; y < kopf.hoehe; y += 1) {
+      const filter = roh[quelle]
+      quelle += 1
+      const zeile = flach.subarray(y * zeilenbreite, (y + 1) * zeilenbreite)
+      const oben = y > 0 ? flach.subarray((y - 1) * zeilenbreite, y * zeilenbreite) : null
+
+      for (let x = 0; x < zeilenbreite; x += 1) {
+        const wert = roh[quelle + x]
+        const links = x >= kanaele ? zeile[x - kanaele] : 0
+        const drueber = oben ? oben[x] : 0
+        const schraeg = oben && x >= kanaele ? oben[x - kanaele] : 0
+
+        let ergebnis
+        if (filter === 0) ergebnis = wert
+        else if (filter === 1) ergebnis = wert + links
+        else if (filter === 2) ergebnis = wert + drueber
+        else if (filter === 3) ergebnis = wert + ((links + drueber) >> 1)
+        else if (filter === 4) ergebnis = wert + paeth(links, drueber, schraeg)
+        else return null
+        zeile[x] = ergebnis & 0xff
+      }
+      quelle += zeilenbreite
+    }
+
+    /* Auf drei Bytes je Punkt bringen, egal wie es ankam. */
+    const punkte = Buffer.alloc(kopf.breite * kopf.hoehe * 3)
+    for (let i = 0, ziel = 0; i < kopf.breite * kopf.hoehe; i += 1, ziel += 3) {
+      const q = i * kanaele
+      if (kopf.farbtyp === 3) {
+        const eintrag = flach[q] * 3
+        punkte[ziel] = palette[eintrag]
+        punkte[ziel + 1] = palette[eintrag + 1]
+        punkte[ziel + 2] = palette[eintrag + 2]
+      } else if (kopf.farbtyp === 0 || kopf.farbtyp === 4) {
+        punkte[ziel] = flach[q]
+        punkte[ziel + 1] = flach[q]
+        punkte[ziel + 2] = flach[q]
+      } else {
+        punkte[ziel] = flach[q]
+        punkte[ziel + 1] = flach[q + 1]
+        punkte[ziel + 2] = flach[q + 2]
+      }
+    }
+
+    return { breite: kopf.breite, hoehe: kopf.hoehe, punkte }
+  } catch {
+    /* Ein kaputtes Bild ist kein Grund, die Karte anzuhalten. */
+    return null
+  }
+}
+
+/** Der Paeth-Vorhersagefilter aus der PNG-Spezifikation. */
+function paeth(a, b, c) {
+  const p = a + b - c
+  const pa = Math.abs(p - a)
+  const pb = Math.abs(p - b)
+  const pc = Math.abs(p - c)
+  if (pa <= pb && pa <= pc) return a
+  if (pb <= pc) return b
+  return c
+}
+
+/** Aus Bildpunkten wieder ein PNG. Gegenstück zu `pngLesen`. */
+export function pngSchreiben(punkte, breite, hoehe) {
+  return alsPng(punkte, breite, hoehe)
 }
