@@ -66,10 +66,25 @@ const json = (res, status, body) => {
   res.end(text)
 }
 
-/** Der Browser fragt vor jedem Aufruf nach, daher die Freigabe. */
+/**
+ * Der Browser fragt vor jedem Aufruf nach, daher die Freigabe.
+ *
+ * ┌─ Woran das hängt ────────────────────────────────────────────────────────┐
+ * │  Website-/src/lib/store/api.js   schickt genau diese Kopfzeilen          │
+ * │  .github/workflows/ngrok.yml     davor liegt der Tunnel                  │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * `ngrok-skip-browser-warning` steht mit in der Liste, und das ist kein
+ * Beiwerk: Ein kostenloser ngrok-Tunnel schiebt Browsern eine Warnseite
+ * dazwischen, statt die Anfrage durchzulassen. Wer sie überspringen will,
+ * schickt diese Kopfzeile. Eine Kopfzeile, die hier nicht freigegeben ist,
+ * lässt der Browser aber gar nicht erst los, und dann scheitert schon die
+ * Voranfrage. Ohne diese Zeile prüft die App also entweder gegen eine
+ * Warnseite oder gegen eine abgelehnte Voranfrage.
+ */
 function cors(res, origin) {
   res.setHeader('access-control-allow-origin', origin ?? '*')
-  res.setHeader('access-control-allow-headers', 'content-type, authorization')
+  res.setHeader('access-control-allow-headers', 'content-type, authorization, ngrok-skip-browser-warning')
   res.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS')
   res.setHeader('access-control-max-age', '600')
 }

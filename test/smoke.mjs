@@ -70,6 +70,32 @@ const health = await api('/api/health')
 check('Server antwortet', health.status === 200 && health.body.ok)
 check('Aufrufliste ist gefüllt', health.body.aufrufe > 50, `nur ${health.body.aufrufe}`)
 
+/*
+ * Die Voranfrage des Browsers.
+ *
+ * Die App läuft in der APK unter `https://localhost` und ruft den Server über
+ * ngrok. Fehlt hier eine Kopfzeile, die sie schickt, lehnt der Browser den
+ * Aufruf ab, bevor er losgeht, und in der App sieht es aus, als sei der
+ * Server kaputt. `ngrok-skip-browser-warning` ist genau so eine: ohne sie
+ * schiebt ein kostenloser Tunnel eine Warnseite statt der Antwort.
+ */
+const vorab = await fetch(`${BASE}/api/rpc`, {
+  method: 'OPTIONS',
+  headers: {
+    origin: 'https://localhost',
+    'access-control-request-method': 'POST',
+    'access-control-request-headers': 'content-type, ngrok-skip-browser-warning',
+  },
+})
+const erlaubt = (vorab.headers.get('access-control-allow-headers') ?? '').toLowerCase()
+check('Voranfrage aus der App wird beantwortet', vorab.status === 204, `Status ${vorab.status}`)
+check('Herkunft der App ist freigegeben',
+  vorab.headers.get('access-control-allow-origin') === 'https://localhost',
+  vorab.headers.get('access-control-allow-origin') ?? '(keine)')
+check('Die ngrok-Kopfzeile darf mitkommen',
+  erlaubt.includes('ngrok-skip-browser-warning'), erlaubt || '(keine)')
+check('Zugangsmerkmal darf mitkommen', erlaubt.includes('authorization'), erlaubt || '(keine)')
+
 const places = await api('/api/places')
 check('Betriebe ohne Anmeldung lesbar',
   places.status === 200 && places.body.result?.length >= 100,
