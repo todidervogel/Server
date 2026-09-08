@@ -87,6 +87,19 @@ pruefe('Eine gespeicherte Kachel wird von der Platte bedient',
   ausSpeicher.herkunft === 'speicher' && ausSpeicher.inhalt.equals(erfunden),
   `Herkunft: ${ausSpeicher.herkunft}`)
 
+/* --- Der Zähler ------------------------------------------------------------ */
+/*
+ * Er zählt, was wirklich durchging. Geprüft wird deshalb gegen die Anfragen,
+ * die dieser Test selbst gestellt hat: Wären es weniger, würde ein Weg durch
+ * den Server am Zähler vorbeilaufen.
+ */
+const status = await (await fetch(`${BASIS}/api/status`)).json()
+pruefe('Der Status zählt die Kacheln mit', status.anfragen.karte >= 5,
+  `karte=${status.anfragen.karte}`)
+pruefe('Der Status zählt alles zusammen', status.anfragen.gesamt >= status.anfragen.karte)
+pruefe('Der Status sagt, wie lange er schon läuft', Number.isFinite(status.laufzeitSek))
+pruefe('Der Status kennt den Bestand', status.betriebe > 100, `${status.betriebe}`)
+
 /* --- Marker ---------------------------------------------------------------- */
 const marker = async (frage) =>
   (await (await fetch(`${BASIS}/api/karte/betriebe?${frage}`)).json()).result

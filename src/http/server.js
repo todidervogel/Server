@@ -4,6 +4,7 @@ import * as tokens from './tokens.js'
 import { callRpc, listRoutes } from './rpc.js'
 import { kachel, stil } from './karte.js'
 import { titelbild } from '../domain/titelbild.js'
+import { stand, zaehlen } from './zaehler.js'
 
 /**
  * Der HTTP-Server. Ohne Fremdabhängigkeiten, `npm install` lädt nichts nach,
@@ -14,6 +15,7 @@ import { titelbild } from '../domain/titelbild.js'
  * │  src/http/rpc.js      der eine Eingang für die Fachlogik                 │
  * │  src/http/tokens.js   macht aus einer Anmeldung ein Merkmal              │
  * │  src/http/karte.js    Kacheln und Marker                                 │
+ * │  src/http/zaehler.js  zählt mit, was abgerufen wird (GET /api/status)    │
  * │  src/domain/auth.js   Anmeldung, Registrierung, Passwort                 │
  * │  test/smoke.mjs       fährt ihn im Speicher hoch und klopft ihn ab       │
  * └──────────────────────────────────────────────────────────────────────────┘
@@ -101,6 +103,19 @@ export function createApiServer({ store, log = console.log }) {
     'GET /api/health': () => ({
       status: 200,
       body: { ok: true, aufrufe: listRoutes().length, sitzungen: tokens.count(), zeit: new Date().toISOString() },
+    }),
+
+    /*
+     * Was der Server gerade tut. `/api/health` sagt nur, ob er antwortet;
+     * hier steht, wie lange er schon läuft, was abgerufen wurde und ob
+     * überhaupt jemand da ist.
+     *
+     * Der Workflow zeigt das jede halbe Minute im Protokoll an, damit man
+     * einem laufenden Server beim Laufen zusehen kann.
+     */
+    'GET /api/status': () => ({
+      status: 200,
+      body: stand({ sitzungen: tokens.count(), betriebe: store.get().places.length }),
     }),
 
     'GET /api/routes': () => ({ status: 200, body: { routes: listRoutes() } }),
@@ -229,6 +244,13 @@ export function createApiServer({ store, log = console.log }) {
   return createServer(async (req, res) => {
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`)
     cors(res, req.headers.origin)
+
+    /*
+     * Gezählt wird am Ende der Antwort, nicht am Anfang: Nur so steht der
+     * Status wirklich fest. Ein einziger Haken an `res` fängt jeden Weg
+     * durch diese Funktion, auch die vorzeitigen Rückgaben weiter unten.
+     */
+    res.once('finish', () => zaehlen(url.pathname, res.statusCode))
 
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 

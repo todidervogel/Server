@@ -55,10 +55,10 @@ on:
         default: false
         type: boolean
 
-# Die Datenbank des letzten Laufs herunterladen zu dürfen, ist alles, was
-# dieser Workflow an Rechten braucht.
+# `contents: write`, weil der Lauf seine Adresse in `adresse.json` schreibt.
+# Daraus holt sie der APK-Bau, ohne dass jemand sie abtippt.
 permissions:
-  contents: read
+  contents: write
   actions: read
 
 jobs:
@@ -179,6 +179,28 @@ jobs:
             "$ADRESSE/api/karte/kachel/13/4259/2791.png"
           file kachel.png
 
+      # Die Adresse ins Repository schreiben. `adresse.json` liegt öffentlich
+      # unter raw.githubusercontent.com; der APK-Bau und die App holen sie
+      # sich von dort, statt dass jemand sie jedes Mal eintippt.
+      #
+      # Über die Contents-API und nicht über `git push`: Der Runner klont nur
+      # den letzten Commit (Tiefe 1). Ein Rebase darauf ist unzuverlässig, ein
+      # PUT auf eine einzelne Datei nicht.
+      - name: Adresse veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ENDE=$(date -u -d "+${{ inputs.minuten || '60' }} minutes" +%Y-%m-%dT%H:%M:%SZ)
+          jq -n \
+            --arg adresse "$ADRESSE" \
+            --arg seit "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg bis "$ENDE" \
+            --arg lauf "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{adresse: $adresse, seit: $seit, laeuftBis: $bis, beendet: false, lauf: $lauf}' \
+            > adresse.json
+          cat adresse.json
+          bash .github/adresse-hochladen.sh
+
       - name: Adresse aufschreiben
         run: |
           BETRIEBE=$(curl -s -H 'ngrok-skip-browser-warning: 1' "$ADRESSE/api/places" | jq '.result | length')
@@ -203,22 +225,58 @@ jobs:
             echo "Der Lauf endet nach ${{ inputs.minuten || '60' }} Minuten. Danach ist die Adresse tot."
             echo 'Die Datenbank wird zum Schluss als Artefakt `datenbank` abgelegt und beim'
             echo 'nächsten Lauf wieder eingespielt, Konten und Beiträge bleiben also erhalten.'
+            echo
+            echo '### Musst du irgendwo eintippen?'
+            echo
+            echo 'Nein. Die Adresse steht in `adresse.json` in diesem Repository.'
+            echo 'Der APK-Bau holt sie sich von dort, und die App kann sie über'
+            echo '*Einstellungen → Verbindung → Aktuelle Adresse holen* nachladen.'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Hier läuft der Server. Damit man ihm beim Laufen zusehen kann, steht
+      # alle 30 Sekunden eine Zeile im Protokoll: wie lange er schon läuft,
+      # was abgerufen wurde, wie viele angemeldet sind. GitHub zeigt das
+      # Protokoll live an, man muss den Lauf also nur offen lassen.
       - name: Laufen lassen
         run: |
           MINUTEN=${{ inputs.minuten || '60' }}
           [ "$MINUTEN" -gt 330 ] && MINUTEN=330
           echo "Läuft für $MINUTEN Minuten unter $ADRESSE"
+          echo ''
+          echo '  Zeit  | Anfragen (wohin)                                    | Sitzungen | zuletzt'
+          echo '  ------+-----------------------------------------------------+-----------+--------'
+
           END=$(( $(date +%s) + MINUTEN * 60 ))
           while [ "$(date +%s)" -lt "$END" ]; do
-            if ! curl -sf http://localhost:4000/api/health > /dev/null; then
+            STATUS=$(curl -sf http://localhost:4000/api/status) || {
               echo '::error::Der Server ist weggebrochen.'
               tail -50 server.log
               exit 1
+            }
+
+            echo "$STATUS" | jq -r '
+              "  " + (((.laufzeitSek / 60) | floor | tostring) + " min" | .[0:5] | (" " * (5 - length)) + .)
+              + " | " + ((.anfragen.gesamt | tostring) | (" " * (5 - length)) + .)
+              + "  Karte " + (.anfragen.karte | tostring)
+              + ", RPC " + (.anfragen.rpc | tostring)
+              + ", Bilder " + (.anfragen.bilder | tostring)
+              + ", Anmeldung " + (.anfragen.anmeldung | tostring)
+              + ", Fehler " + (.anfragen.fehler | tostring)
+              + " | " + ((.sitzungen | tostring) | (" " * (9 - length)) + .)
+              + " | " + (if .letzteAnfrageVorSek == null then "noch nichts" else "vor " + (.letzteAnfrageVorSek | tostring) + "s" end)'
+
+            # Was der Server selbst gemeldet hat, seit dem letzten Blick.
+            if [ -s server.log ]; then
+              NEU=$(wc -l < server.log)
+              if [ "${GESEHEN:-0}" -lt "$NEU" ]; then
+                tail -n +$(( ${GESEHEN:-0} + 1 )) server.log | sed 's/^/         /'
+                GESEHEN=$NEU
+              fi
             fi
-            sleep 60
+
+            sleep 30
           done
+          echo ''
           echo 'Zeit um.'
 
       # Erst sauber beenden, dann sichern: Beim Beenden schließt der Server die
@@ -230,6 +288,19 @@ jobs:
           [ -f server.pid ] && kill -TERM "$(cat server.pid)" 2>/dev/null || true
           sleep 3
           ls -la data 2>/dev/null || true
+
+      # Der Lauf ist vorbei, die Adresse ist tot. Wer sie danach noch holt,
+      # soll das sehen: `beendet` steht dann auf true.
+      - name: Adresse zurückziehen
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -f adresse.json ] || exit 0
+          jq --arg jetzt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '.laeuftBis = $jetzt | .beendet = true' adresse.json > tmp.json
+          mv tmp.json adresse.json
+          bash .github/adresse-hochladen.sh || true
 
       - name: Datenbank für den nächsten Lauf sichern
         if: always()

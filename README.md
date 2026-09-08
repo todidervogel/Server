@@ -4,7 +4,7 @@ Fachlogik, Datenbank und HTTP-Schnittstelle. Ohne Fremdabhängigkeiten, `npm ins
 
 ```bash
 node src/index.js       # startet auf Port 4000
-npm test                # 78 Prüfungen: Rauchtest, Datenbank, Karte
+npm test                # 82 Prüfungen: Vollständigkeit, Rauchtest, Datenbank, Karte
 npm run reset           # Datenbank und Kacheln weg, der nächste Start legt sie neu an
 ```
 
@@ -166,10 +166,37 @@ schlimmer aus als eine leere.
 
 ```bash
 npm run testdaten           # holt sie neu (braucht Zugang zu Overpass)
-npm run testdaten:pruefen   # 11 Prüfungen auf dem, was da ist
+npm run testdaten:pruefen   # 12 Prüfungen auf dem, was da ist
 ```
 
-Vom Handy aus: **Actions → „Testdaten holen"**.
+### Was „Testdaten holen" tut
+
+Vom Handy aus: **Actions, „Testdaten holen"**. Der Workflow
+
+1. fragt **Overpass** ab, die Abfrageschnittstelle von OpenStreetMap, einmal je
+   Gegend: alles, was Restaurant, Café, Imbiss, Bar, Kneipe, Eisdiele,
+   Biergarten, Bäckerei, Metzgerei oder Feinkostladen ist;
+2. übersetzt die Treffer in unser Datenmodell (Kategorie, Küche, Angebotszeile,
+   Öffnungszeiten in Minuten, Ausstattung, Bild wo vorhanden);
+3. wirft Doppelte weg (OSM führt größere Lokale oft zweimal, als Punkt und als
+   Gebäudefläche) und ordnet Betriebe, die in zwei Umkreisen liegen, der
+   näheren Gegend zu;
+4. behält je Gegend die 120 nächstgelegenen;
+5. schreibt `src/data/orte.js` und **committet die Datei**, wenn sich etwas
+   geändert hat.
+
+Der Name ist inzwischen irreführend: Es sind keine Testdaten, sondern **die**
+Daten. „Beispieldaten" gibt es seit Runde 9 keine mehr.
+
+Zwei Dinge, die man wissen sollte:
+
+- **Overpass ist ein Dienst, den Freiwillige bezahlen.** Er sagt regelmäßig
+  „zu viele Anfragen", besonders zu Runnern, deren Adressen sich viele teilen.
+  Der Import probiert deshalb vier Spiegel reihum, in vier Runden mit
+  wachsender Pause. Eine Gegend, die trotzdem nicht durchkommt, reißt die
+  anderen nicht mit: Ihr letzter Stand bleibt stehen.
+- **`src/data/anreicherung.js` überlebt jeden Import.** Die Beschreibungen dort
+  hängen am Kürzel, nicht an der Zeile in `orte.js`.
 
 **Keine übernommenen Bewertungen.** Weder von Google noch von sonst woher, eine fremde Sternezahl sagt nichts darüber, was bewertet wurde, und ließe
 sich nicht nachvollziehen. `tools/orte-pruefen.mjs` prüft, dass keine
@@ -207,8 +234,45 @@ es geprüft wurde.
 
 ## Vom Handy aus
 
-**Actions → „Server über ngrok"** startet den Server und macht ihn erreichbar.
-Die Adresse steht danach in der Zusammenfassung des Laufs.
+**Actions, „Server über ngrok"** startet den Server und macht ihn erreichbar.
+
+### Man sieht ihm beim Laufen zu
+
+Solange der Lauf läuft, steht alle 30 Sekunden eine Zeile im Protokoll:
+
+```
+  Zeit  | Anfragen (wohin)                                    | Sitzungen | zuletzt
+  ------+-----------------------------------------------------+-----------+--------
+    3 min |    47  Karte 38, RPC 6, Bilder 2, Anmeldung 1, Fehler 0 |         1 | vor 4s
+    4 min |    62  Karte 49, RPC 9, Bilder 3, Anmeldung 1, Fehler 0 |         1 | vor 1s
+```
+
+Daran sieht man, ob überhaupt jemand etwas abruft, ob die Karte Kacheln holt
+und ob jemand angemeldet ist. Dieselben Zahlen gibt es unter `/api/status`.
+
+### Die Adresse muss niemand abtippen
+
+Der Lauf schreibt sie in `adresse.json` in dieses Repository. Der APK-Bau holt
+sie sich von dort, und die App kann sie über *Einstellungen, Verbindung,
+Aktuelle Adresse holen* nachladen. Einzelheiten in
+[docs/ADRESSE.md](docs/ADRESSE.md).
+
+### Das Kästchen „Von vorn anfangen"
+
+Beim Starten des Workflows steht dort ein Häkchen:
+
+| Häkchen | Was passiert |
+|---|---|
+| **leer** (Normalfall) | Die Datenbank des letzten Laufs wird eingespielt. Konten, Videos, Bewertungen und Merkzettel sind wieder da. |
+| **gesetzt** | Der Lauf fängt bei null an: nur die importierten Betriebe und die drei Zugänge. |
+
+Gesetzt wird es, wenn beim Ausprobieren etwas durcheinandergeraten ist und man
+einen sauberen Stand will.
+
+Die Datenbank wird am Ende jedes Laufs als Artefakt `datenbank` abgelegt und
+beim nächsten wieder eingespielt. Grenzen und Vorbehalte stehen oben in
+`.github/workflows/server-ngrok.yml`; die wichtigste: Wer das Repository lesen
+darf, kann das Artefakt herunterladen.
 
 Die Datenbank wird am Ende als Artefakt abgelegt und beim nächsten Lauf
 wieder eingespielt, Konten und Beiträge bleiben also von Lauf zu Lauf
@@ -231,4 +295,16 @@ npm test
 |---|---|
 | `test/smoke.mjs` | Adressen, Rechte, ein Ablauf von Anfang bis Ende, legt sich seine Daten selbst an |
 | `test/datenbank.mjs` | Ob alles den Neustart übersteht. Der Server wird dafür wirklich heruntergefahren |
-| `test/karte.mjs` | Kacheln, Zwischenspeicher, Marker im Ausschnitt |
+| `test/karte.mjs` | Kacheln, Zwischenspeicher, Marker im Ausschnitt, Zähler |
+
+Dazu läuft vor allen dreien `tools/vollstaendig.mjs`: Es geht von
+`src/index.js` aus jedem lokalen Import nach und fragt git, ob es die Datei
+kennt. Das findet die eine Sorte Fehler, die kein Test findet, nämlich eine
+Datei, die versehentlich in `.gitignore` gelandet ist. Lokal läuft dann alles
+weiter, und erst der Runner, der frisch klont, bricht ab.
+
+## Arbeitsregeln
+
+Wie hier gearbeitet wird, steht in [CLAUDE.md](CLAUDE.md): bei jeder Änderung
+die Abhängigkeiten prüfen, auf Fehler prüfen, Kommentare und Dokumentation
+mitziehen.
