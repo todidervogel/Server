@@ -2,7 +2,13 @@ node_modules/
 
 # Die Datenbank und die Kacheln entstehen beim Betrieb und gehören niemandem
 # außer dem Rechner, auf dem der Server läuft. Der erste Start legt beides an.
-data/
+#
+# Der Schrägstrich vorn ist wichtig: Ohne ihn passt `data/` auf JEDEN Ordner
+# dieses Namens, also auch auf `src/data/` mit dem Ausgangsbestand. Genau das
+# ist passiert. `src/data/zustand.js` war neu, wurde stillschweigend nicht
+# eingecheckt, und der Server startete auf dem Runner nicht mehr:
+# „Cannot find module .../src/data/zustand.js". Lokal lief alles.
+/data/
 
 *.log
 .DS_Store

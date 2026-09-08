@@ -83,6 +83,12 @@ jobs:
             exit 1
           fi
 
+      # Bevor irgendetwas startet: Ist überhaupt alles da, was der Server
+      # braucht? Der Runner klont frisch — eine Datei, die versehentlich in
+      # .gitignore gelandet ist, fällt genau hier auf und sonst nirgends.
+      - name: Nachsehen, ob alles im Repository liegt
+        run: node tools/vollstaendig.mjs
+
       - name: Datenbank des letzten Laufs holen
         if: ${{ !inputs.frisch }}
         env:
