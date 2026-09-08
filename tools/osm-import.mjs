@@ -214,6 +214,59 @@ function oeffnungszeiten(text) {
   return Object.keys(hours).length ? hours : null
 }
 
+/**
+ * Ausstattung aus den OSM-Merkmalen.
+ *
+ * Die Oberfläche zeigt sie als Reihe von Punkten auf der Betriebsseite. Was
+ * OSM nicht sagt, wird nicht behauptet — ein leeres Feld ist ehrlicher als
+ * ein geratenes „Kartenzahlung möglich".
+ */
+const AUSSTATTUNG = [
+  ['aussenplaetze', (t) => t.outdoor_seating === 'yes' || t.amenity === 'biergarten'],
+  ['barrierefrei', (t) => t.wheelchair === 'yes'],
+  ['abholung', (t) => t.takeaway === 'yes' || t.takeaway === 'only'],
+  ['lieferung', (t) => t.delivery === 'yes'],
+  ['reservierung', (t) => t.reservation === 'yes' || t.reservation === 'recommended'],
+  ['wlan', (t) => t.internet_access === 'wlan' || t.internet_access === 'yes'],
+  ['hunde', (t) => t.dog === 'yes' || t.dog === 'leashed'],
+  ['vegan', (t) => t['diet:vegan'] === 'yes' || t['diet:vegan'] === 'only'],
+  ['vegetarisch', (t) => t['diet:vegetarian'] === 'yes' || t['diet:vegetarian'] === 'only'],
+  ['kartenzahlung', (t) => ['payment:cards', 'payment:debit_cards', 'payment:credit_cards',
+    'payment:visa', 'payment:mastercard', 'payment:girocard'].some((k) => t[k] === 'yes')],
+]
+
+const ausstattung = (tags) => AUSSTATTUNG.filter(([, trifft]) => trifft(tags)).map(([name]) => name)
+
+/**
+ * Ein Bild, wenn es eines gibt.
+ *
+ * OpenStreetMap führt bei manchen Betrieben `image` (eine Adresse) oder
+ * `wikimedia_commons` (ein Dateiname bei Wikimedia Commons). Beides ist frei
+ * lizenziert und darf gezeigt werden — mit Nennung, deshalb kommt die Quelle
+ * mit.
+ *
+ * Von Google Maps wird **kein** Bild übernommen: Die Fotos dort gehören denen,
+ * die sie gemacht haben, und dürfen weder heruntergeladen noch weitergegeben
+ * werden. Wo nichts da ist, zeichnet der Server ein Titelbild
+ * (src/http/bilder.js).
+ */
+function bild(tags) {
+  const commons = tags.wikimedia_commons ?? tags.image_commons
+  if (commons && /^File:/i.test(commons)) {
+    const datei = encodeURIComponent(commons.replace(/^File:/i, '').trim())
+    return {
+      bildUrl: `https://commons.wikimedia.org/wiki/Special:FilePath/${datei}?width=1200`,
+      bildQuelle: `https://commons.wikimedia.org/wiki/${encodeURIComponent(commons)}`,
+      bildLizenz: 'Wikimedia Commons — siehe Dateiseite',
+    }
+  }
+  const direkt = tags.image
+  if (direkt && /^https:\/\//.test(direkt) && /\.(jpe?g|png|webp)(\?|$)/i.test(direkt)) {
+    return { bildUrl: direkt, bildQuelle: direkt, bildLizenz: 'Angabe in OpenStreetMap' }
+  }
+  return { bildUrl: null, bildQuelle: null, bildLizenz: null }
+}
+
 const kuerzel = (text) =>
   String(text).toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
@@ -323,10 +376,21 @@ function umbauen(element, gegend, vergeben) {
     phone: tags.phone ?? tags['contact:phone'] ?? '',
     website: (tags.website ?? tags['contact:website'] ?? '').replace(/^https?:\/\//, ''),
     hours: oeffnungszeiten(tags.opening_hours),
-    verified: false,
+    features: ausstattung(tags),
+    ...bild(tags),
+    /* Kein `verified`: Das rechnet src/domain/derive.js aus `claimStatus`. */
     claimStatus: 'unclaimed',
     claimedBy: null,
     status,
+    /*
+     * KEINE BEWERTUNGEN. Weder von Google noch von sonst woher.
+     *
+     * Ausdrücklich so bestellt, und es ist auch die einzige haltbare Antwort:
+     * Eine übernommene Sternezahl sagt nichts darüber, was hier bewertet
+     * wurde, lässt sich nicht nachvollziehen und wäre eine Behauptung über
+     * einen Betrieb, die wir nicht belegen können. Bewertungen entstehen in
+     * dieser Anwendung — mit Video, mit drei Achsen, oder gar nicht.
+     */
     hasCover: false,
   }
 }

@@ -1,32 +1,48 @@
-import { randomUUID } from 'node:crypto'
-
 /**
- * Sitzungen im Arbeitsspeicher.
+ * Anmeldungen für den HTTP-Teil.
  *
- * Bewusst einfach: ein zufälliges Merkmal je Anmeldung, gültig bis zum
- * Neustart oder bis zur Abmeldung. Kein JWT, keine Verlängerung — beim Umzug
- * auf einen echten Anmeldedienst fällt diese Datei ohnehin weg.
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/http/server.js   stellt beim Anmelden ein Merkmal aus               │
+ * │  src/http/rpc.js      macht daraus bei jedem Aufruf ein Konto            │
+ * │  src/index.js         hängt über setSitzungen() die Datenbank ein        │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Diese Datei ist nur die Durchreiche. Wo die Sitzungen wirklich liegen,
+ * steht in src/store/sitzungen.js — in der Datenbank, damit ein Neustart
+ * niemanden abmeldet.
+ *
+ * Ohne eingehängte Sitzungsverwaltung — im Rauchtest zum Beispiel — hält sie
+ * die Sitzungen im Arbeitsspeicher. Dann gilt: Neustart, alle draußen.
  */
-const sessions = new Map()
-const LIFETIME_MS = 1000 * 60 * 60 * 12
+import { randomBytes } from 'node:crypto'
 
-export function issue(userId) {
-  const token = randomUUID()
-  sessions.set(token, { userId, until: Date.now() + LIFETIME_MS })
-  return token
+const speicher = new Map()
+const DAUER_MS = 1000 * 60 * 60 * 12
+
+const imSpeicher = {
+  ausstellen(userId) {
+    const token = randomBytes(32).toString('base64url')
+    speicher.set(token, { userId, bis: Date.now() + DAUER_MS })
+    return token
+  },
+  nutzerZu(token) {
+    const sitzung = speicher.get(token)
+    if (!sitzung) return null
+    if (sitzung.bis < Date.now()) { speicher.delete(token); return null }
+    return sitzung.userId
+  },
+  widerrufen: (token) => { speicher.delete(token) },
+  anzahl: () => speicher.size,
 }
 
-export function userIdFor(token) {
-  const session = sessions.get(token)
-  if (!session) return null
-  if (session.until < Date.now()) { sessions.delete(token); return null }
-  return session.userId
+let sitzungen = imSpeicher
+
+/** Hängt die Sitzungsverwaltung der Datenbank ein (src/index.js). */
+export function setSitzungen(next) {
+  sitzungen = next ?? imSpeicher
 }
 
-export function revoke(token) {
-  sessions.delete(token)
-}
-
-export function count() {
-  return sessions.size
-}
+export const issue = (userId) => sitzungen.ausstellen(userId)
+export const userIdFor = (token) => (token ? sitzungen.nutzerZu(token) : null)
+export const revoke = (token) => { if (token) sitzungen.widerrufen(token) }
+export const count = () => sitzungen.anzahl()

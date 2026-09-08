@@ -1,5 +1,8 @@
 node_modules/
-data/db.json
-data/db.json.tmp
+
+# Die Datenbank und die Kacheln entstehen beim Betrieb und gehören niemandem
+# außer dem Rechner, auf dem der Server läuft. Der erste Start legt beides an.
+data/
+
 *.log
 .DS_Store

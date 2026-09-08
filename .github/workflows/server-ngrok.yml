@@ -19,12 +19,26 @@
 # Datei ist ein Token in der Versionsgeschichte — auch nach dem Löschen.
 # ────────────────────────────────────────────────────────────────────────────
 #
-# GRENZEN, die man vorher wissen sollte:
+# BLEIBEN DIE DATEN?
+#
+# Ja, von Lauf zu Lauf — mit einem Umweg. Ein Workflow bekommt jedes Mal eine
+# frische Maschine; alles darauf ist am Ende weg. Deshalb wird die Datenbank
+# zum Schluss als Artefakt abgelegt und beim nächsten Start wieder eingespielt.
+# Wer sich also anmeldet, ein Video hochlädt oder etwas merkt, findet es beim
+# nächsten Lauf wieder.
+#
+#   ⚠  Das Artefakt kann jeder herunterladen, der dieses Repository lesen darf.
+#      Darin stehen E-Mail-Adressen und Passwort-Hashes (scrypt, gesalzen —
+#      keine Klartextpasswörter). Für einen MVP mit Testzugängen ist das
+#      vertretbar; sobald echte Menschen Konten anlegen, gehört die Datenbank
+#      auf eine echte Maschine und nicht in ein Artefakt.
+#
+#   Artefakte werden nach 90 Tagen von GitHub gelöscht.
+#
+# WEITERE GRENZEN:
 #
 #   • Der Lauf hält höchstens `minuten` durch und hört dann auf. Ein Workflow
 #     ist kein Hoster. Für den Dauerbetrieb braucht es eine echte Maschine.
-#   • Beim Ende ist alles weg, was in der Zwischenzeit angelegt wurde. Der
-#     Datenbestand lebt in der Datei des Runners.
 #   • Ohne feste Adresse gibt es bei jedem Start eine neue.
 name: Server über ngrok
 
@@ -36,10 +50,16 @@ on:
         required: false
         default: '60'
       frisch:
-        description: 'Mit frischen Beispieldaten starten'
+        description: 'Von vorn anfangen (Datenbank des letzten Laufs verwerfen)'
         required: false
-        default: true
+        default: false
         type: boolean
+
+# Die Datenbank des letzten Laufs herunterladen zu dürfen, ist alles, was
+# dieser Workflow an Rechten braucht.
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   server:
@@ -48,9 +68,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # node:sqlite gibt es ab Node 22.5 — darauf steht die Datenhaltung.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Nachsehen, ob der Token hinterlegt ist
         env:
@@ -62,13 +83,41 @@ jobs:
             exit 1
           fi
 
+      - name: Datenbank des letzten Laufs holen
+        if: ${{ !inputs.frisch }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p data
+
+          # Das neueste Artefakt namens „datenbank“ aus diesem Repository
+          # suchen. Gibt es keines — erster Lauf —, ist das kein Fehler.
+          ID=$(curl -sS -H "authorization: Bearer $GH_TOKEN" \
+                 "https://api.github.com/repos/${{ github.repository }}/actions/artifacts?name=datenbank&per_page=1" \
+               | jq -r '.artifacts[0].id // empty')
+
+          if [ -z "$ID" ]; then
+            echo 'Kein früherer Stand gefunden — der Server legt eine neue Datenbank an.'
+            echo "STAND=neu" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          curl -sSL -H "authorization: Bearer $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$ID/zip" -o datenbank.zip
+          unzip -o datenbank.zip -d data > /dev/null
+          rm datenbank.zip
+          ls -la data
+          echo "STAND=übernommen" >> "$GITHUB_ENV"
+
       - name: Server starten
         run: |
-          ${{ inputs.frisch && 'rm -f data/db.json' || '' }}
+          ${{ inputs.frisch && 'rm -rf data' || '' }}
           node src/index.js > server.log 2>&1 &
+          echo $! > server.pid
           for i in $(seq 1 30); do
             if curl -sf http://localhost:4000/api/health > /dev/null; then
               echo 'Server läuft.'
+              head -20 server.log
               exit 0
             fi
             sleep 1
@@ -97,8 +146,7 @@ jobs:
 
           # Die Adresse steht in der lokalen Verwaltungsschnittstelle von ngrok.
           for i in $(seq 1 30); do
-            ADRESSE=$(curl -s http://localhost:4040/api/tunnels \
-              | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log(JSON.parse(s).tunnels[0].public_url)}catch{}})")
+            ADRESSE=$(curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url // empty')
             [ -n "$ADRESSE" ] && break
             sleep 2
           done
@@ -120,9 +168,14 @@ jobs:
             echo '::error::Die Adresse antwortet nicht wie erwartet.'
             exit 1
           }
+          # Und die Karte: eine Kachel muss kommen, sonst bleibt sie leer.
+          curl -s -o kachel.png -H 'ngrok-skip-browser-warning: 1' \
+            "$ADRESSE/api/karte/kachel/13/4259/2791.png"
+          file kachel.png
 
       - name: Adresse aufschreiben
         run: |
+          BETRIEBE=$(curl -s -H 'ngrok-skip-browser-warning: 1' "$ADRESSE/api/places" | jq '.result | length')
           {
             echo '## Der Server läuft'
             echo
@@ -130,6 +183,8 @@ jobs:
             echo
             echo 'In der Webseite eintragen (Actions → „Webseite veröffentlichen" → Feld `api`)'
             echo 'oder beim APK-Bau (Actions → „APK bauen" → Feld `api`).'
+            echo
+            echo "Datenbestand: **$BETRIEBE Betriebe**, Stand: **${STAND:-neu}**."
             echo
             echo '### Zugänge'
             echo
@@ -139,8 +194,9 @@ jobs:
             echo '| Gastro | `test@gastro.de` | `12345aA?` |'
             echo '| Nutzer | `test@user.de` | `12345aA?` |'
             echo
-            echo "Der Lauf endet nach ${{ inputs.minuten || '60' }} Minuten. Danach ist die Adresse tot"
-            echo 'und alles, was in der Zwischenzeit angelegt wurde, weg.'
+            echo "Der Lauf endet nach ${{ inputs.minuten || '60' }} Minuten. Danach ist die Adresse tot."
+            echo 'Die Datenbank wird zum Schluss als Artefakt `datenbank` abgelegt und beim'
+            echo 'nächsten Lauf wieder eingespielt — Konten und Beiträge bleiben also erhalten.'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Laufen lassen
@@ -159,6 +215,28 @@ jobs:
           done
           echo 'Zeit um.'
 
+      # Erst sauber beenden, dann sichern: Beim Beenden schließt der Server die
+      # Datenbank und schreibt das Journal in die Datei zurück. Eine Datei, die
+      # mitten im Schreiben kopiert wurde, ist beim nächsten Lauf unbrauchbar.
+      - name: Server sauber beenden
+        if: always()
+        run: |
+          [ -f server.pid ] && kill -TERM "$(cat server.pid)" 2>/dev/null || true
+          sleep 3
+          ls -la data 2>/dev/null || true
+
+      - name: Datenbank für den nächsten Lauf sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: datenbank
+          # Nur die Datenbank. Die Kacheln unter data/kacheln/ sind ein
+          # Zwischenspeicher — die holt der nächste Lauf einfach neu.
+          path: data/tellerrand.db*
+          retention-days: 90
+          if-no-files-found: warn
+          overwrite: true
+
       - name: Protokolle mitgeben
         if: always()
         uses: actions/upload-artifact@v4
@@ -168,3 +246,4 @@ jobs:
             server.log
             ngrok.log
           if-no-files-found: ignore
+          overwrite: true

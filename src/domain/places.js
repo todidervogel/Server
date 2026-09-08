@@ -1,6 +1,16 @@
 import { db, patch } from './store.js'
 import { decoratePlace } from './derive.js'
 
+/**
+ * Betriebe.
+ *
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/domain/calls.js   places.list / bySlug / byId / nearby / inBounds   │
+ * │  src/http/server.js    GET /api/places, /api/g/:slug, /api/karte/…       │
+ * │  src/domain/derive.js  rechnet Entfernung, Bewertung und Öffnung dazu    │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ */
+
 const PRICE_ORDER = ['€', '€€', '€€€', '€€€€']
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -55,6 +65,36 @@ export function nearby(position, limit = 8, viewerId) {
   const data = db()
   const all = data.places.map((p) => decoratePlace(p, { position, data, viewerId }))
   return sortPlaces(all, 'distance').slice(0, limit)
+}
+
+/**
+ * Was in einem Kartenausschnitt liegt.
+ *
+ * Für die Karte, nicht für eine Liste: Zurück kommt nur, was ein Marker
+ * braucht. Ein vollständiger Betrieb mit Bewertungen, Öffnungszeiten und
+ * Entfernung ist ein Vielfaches an Daten — bei ein paar hundert Markern
+ * merkt man das auf dem Handy sofort.
+ *
+ * Der Ausschnitt kommt als Rechteck: `nord`/`sued` sind Breitengrade,
+ * `west`/`ost` Längengrade. Über den 180. Längengrad hinweg wird das
+ * Rechteck geteilt — sonst wäre bei einer Karte des Pazifiks plötzlich
+ * alles außerhalb.
+ */
+export function inBounds({ nord, sued, west, ost } = {}, limit = 500) {
+  if (![nord, sued, west, ost].every(Number.isFinite)) return []
+
+  const imLaengengrad = west <= ost
+    ? (lng) => lng >= west && lng <= ost
+    : (lng) => lng >= west || lng <= ost
+
+  return db().places
+    .filter((p) => p.status !== 'archived')
+    .filter((p) => p.lat >= sued && p.lat <= nord && imLaengengrad(p.lng))
+    .slice(0, limit)
+    .map((p) => ({
+      id: p.id, slug: p.slug, name: p.name, lat: p.lat, lng: p.lng,
+      category: p.category, price: p.price, cuisine: p.cuisine, status: p.status,
+    }))
 }
 
 /** Nur Felder, die ein Betrieb selbst pflegen darf. */

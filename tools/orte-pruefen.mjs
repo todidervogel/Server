@@ -79,8 +79,27 @@ const mitAdresse = betriebe.filter((b) => b.address).length
 pruefe('Mindestens die Hälfte hat eine Adresse', mitAdresse * 2 >= betriebe.length,
   `${mitAdresse} von ${betriebe.length}`)
 
+/*
+ * Ausdrücklich bestellt: Bewertungen werden aus keiner fremden Quelle
+ * übernommen. Der Import schreibt keine — diese Prüfung sorgt dafür, dass es
+ * so bleibt, auch wenn jemand später ein Feld „mitnimmt".
+ */
+const BEWERTUNGSFELDER = ['rating', 'ratings', 'stars', 'reviewCount', 'reviews', 'score', 'googleRating']
+const mitFremdbewertung = betriebe.flatMap((b) => BEWERTUNGSFELDER.filter((feld) => feld in b))
+pruefe('Keine übernommenen Bewertungen', mitFremdbewertung.length === 0,
+  [...new Set(mitFremdbewertung)].join(', '))
+
+/* Bilder: nur aus freien Quellen, und dann mit Nennung. */
+const bilderOhneQuelle = betriebe.filter((b) => b.bildUrl && !b.bildQuelle)
+pruefe('Jedes Bild nennt seine Quelle', bilderOhneQuelle.length === 0,
+  `${bilderOhneQuelle.length} ohne`)
+
 const mitZeiten = betriebe.filter((b) => b.hours).length
-console.log(`\n${betriebe.length} Betriebe, ${mitAdresse} mit Adresse, ${mitZeiten} mit Öffnungszeiten.`)
+const mitBild = betriebe.filter((b) => b.bildUrl).length
+const mitAusstattung = betriebe.filter((b) => b.features?.length).length
+console.log(`\n${betriebe.length} Betriebe, ${mitAdresse} mit Adresse, ${mitZeiten} mit Öffnungszeiten, `
+  + `${mitAusstattung} mit Ausstattung, ${mitBild} mit eigenem Bild `
+  + `(der Rest bekommt eins vom Server: src/http/bilder.js).`)
 for (const g of daten.gegenden ?? []) console.log(`  ${g.gegend}: ${g.anzahl}`)
 console.log()
 

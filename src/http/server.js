@@ -2,18 +2,58 @@ import { createServer } from 'node:http'
 import * as domain from '../domain/index.js'
 import * as tokens from './tokens.js'
 import { callRpc, listRoutes } from './rpc.js'
+import { kachel, stil } from './karte.js'
+import { titelbild } from './bilder.js'
 
 /**
  * Der HTTP-Server. Ohne Fremdabhängigkeiten — `npm install` lädt nichts nach,
  * `node src/index.js` genügt.
  *
- * Es gibt zwei Arten von Endpunkten:
+ * ┌─ Wer benutzt diese Datei ────────────────────────────────────────────────┐
+ * │  src/index.js         startet den Server                                 │
+ * │  src/http/rpc.js      der eine Eingang für die Fachlogik                 │
+ * │  src/http/tokens.js   macht aus einer Anmeldung ein Merkmal              │
+ * │  src/http/karte.js    Kacheln und Marker                                 │
+ * │  src/domain/auth.js   Anmeldung, Registrierung, Passwort                 │
+ * │  test/smoke.mjs       fährt ihn im Speicher hoch und klopft ihn ab       │
+ * └──────────────────────────────────────────────────────────────────────────┘
+ *
+ * Es gibt drei Arten von Endpunkten:
  *
  *  - `/api/rpc`   ein Eingang für die gesamte Fachlogik. Was erlaubt ist,
- *                 steht in `rpc.js`, nicht im Frontend.
+ *                 steht in `domain/calls.js`, nicht im Frontend.
  *  - ein paar Leseadressen (`/api/places`, `/api/g/:slug`, …), damit man mit
  *    curl oder dem Browser nachsehen kann, ohne einen Aufruf zu formulieren.
+ *  - `/api/karte/…` die Karte: Kacheln und Marker (siehe `karte.js`).
  */
+
+/** Antwortet mit einem Bild. Kacheln sind das Einzige, was nicht JSON ist. */
+const bild = (res, inhalt, { herkunft } = {}) => {
+  res.writeHead(200, {
+    'content-type': 'image/png',
+    'content-length': inhalt.length,
+    /*
+     * Der Browser darf die Kachel einen Tag behalten. Ohne das holt jedes
+     * Verschieben der Karte dieselben Bilder erneut — über Mobilfunk ist das
+     * der Unterschied zwischen flüssig und zäh.
+     */
+    'cache-control': 'public, max-age=86400',
+    ...(herkunft ? { 'x-kachel': herkunft } : {}),
+  })
+  res.end(inhalt)
+}
+
+/** Antwortet mit einem SVG — die erzeugten Titelbilder. */
+const svg = (res, inhalt) => {
+  const puffer = Buffer.from(inhalt, 'utf8')
+  res.writeHead(200, {
+    'content-type': 'image/svg+xml; charset=utf-8',
+    'content-length': puffer.length,
+    /* Dasselbe Kürzel ergibt immer dasselbe Bild — das darf lange liegen. */
+    'cache-control': 'public, max-age=604800',
+  })
+  res.end(puffer)
+}
 
 const json = (res, status, body) => {
   const text = JSON.stringify(body, null, 2)
@@ -54,7 +94,7 @@ const bearer = (req) => {
   return header.startsWith('Bearer ') ? header.slice(7) : null
 }
 
-export function createApiServer({ store, seedData, log = console.log }) {
+export function createApiServer({ store, log = console.log }) {
   domain.setStore(store)
 
   const handlers = {
@@ -92,6 +132,39 @@ export function createApiServer({ store, seedData, log = console.log }) {
             radiusKm: zahl('radiusKm'),
             query: url.searchParams.get('q') ?? undefined,
           }),
+        },
+      }
+    },
+
+    /* --- Karte ---------------------------------------------------------- */
+
+    'GET /api/karte/stil': () => ({ status: 200, body: stil() }),
+
+    /*
+     * Marker in einem Ausschnitt. Die Karte fragt nach dem, was sie zeigt,
+     * nicht nach allem — bei einer Weltkarte wären das sonst alle Betriebe
+     * auf einmal.
+     *
+     *   /api/karte/betriebe?nord=48.6&sued=48.4&west=8.0&ost=8.2
+     */
+    'GET /api/karte/betriebe': (req, url) => {
+      /*
+       * `Number(null)` ist 0, nicht NaN. Ein fehlendes `max` wurde deshalb
+       * einmal als „höchstens null Marker" gelesen und die Karte blieb leer.
+       * Fehlt der Wert, muss er auch fehlen.
+       */
+      const zahl = (name) => {
+        const roh = url.searchParams.get(name)
+        return roh === null || roh === '' ? undefined : Number(roh)
+      }
+      const grenze = zahl('max')
+      return {
+        status: 200,
+        body: {
+          result: domain.places.inBounds(
+            { nord: zahl('nord'), sued: zahl('sued'), west: zahl('west'), ost: zahl('ost') },
+            Number.isFinite(grenze) ? Math.min(Math.max(grenze, 1), 2000) : 500,
+          ),
         },
       }
     },
@@ -158,6 +231,35 @@ export function createApiServer({ store, seedData, log = console.log }) {
     cors(res, req.headers.origin)
 
     if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
+
+    /*
+     * Kacheln: /api/karte/kachel/14/8512/5583.png
+     *
+     * Eigene Zeile statt Eintrag in der Tabelle, weil die Zahlen im Pfad
+     * stehen. Die Antwort ist ein Bild, kein JSON — und sie kommt immer, zur
+     * Not selbst gezeichnet (siehe karte.js).
+     */
+    const kachelTreffer = url.pathname.match(/^\/api\/karte\/kachel\/(\d+)\/(\d+)\/(\d+)\.png$/)
+    if (req.method === 'GET' && kachelTreffer) {
+      const [, z, x, y] = kachelTreffer
+      const { inhalt, herkunft } = await kachel(Number(z), Number(x), Number(y))
+      return bild(res, inhalt, { herkunft })
+    }
+
+    /*
+     * Titelbild eines Betriebs: /api/bild/betrieb/marimer.svg
+     *
+     * Hat der Betrieb ein echtes Bild (`bildUrl`, aus OpenStreetMap oder
+     * später vom Betrieb selbst), verweist die Antwort dorthin. Sonst wird
+     * eines gezeichnet — siehe bilder.js, dort steht auch, warum.
+     */
+    const bildTreffer = url.pathname.match(/^\/api\/bild\/betrieb\/([^/]+)\.svg$/)
+    if (req.method === 'GET' && bildTreffer) {
+      const betrieb = domain.places.bySlug(decodeURIComponent(bildTreffer[1]))
+      if (!betrieb) return json(res, 404, { error: 'Betrieb nicht gefunden' })
+      if (betrieb.bildUrl) { res.writeHead(302, { location: betrieb.bildUrl }); return res.end() }
+      return svg(res, titelbild(betrieb))
+    }
 
     /* Gastro-Seite und Speisekarte lassen sich direkt abrufen. */
     const placeMatch = url.pathname.match(/^\/api\/g\/([^/]+)(\/speisekarte)?$/)

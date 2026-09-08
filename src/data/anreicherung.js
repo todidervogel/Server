@@ -31,7 +31,7 @@ export const anreicherung = {
   /* --- Oberkirch --------------------------------------------------------- */
 
   'metzgerei-bohnert-oberkirch': {
-    beschreibung:
+    description:
       'Metzgerei am Kirchplatz, seit 1937 in Familienhand und in dritter '
       + 'Generation geführt. Bekannt für hausgemachte Blut- und Leberwurst, '
       + 'Vesperspeck, Maultaschen und Schwarzwälder Schinken nach altem Rezept.',
@@ -42,7 +42,7 @@ export const anreicherung = {
   },
 
   'mayer-s-cafethek-oberkirch': {
-    beschreibung:
+    description:
       'Café der Landbäckerei Zimmerer am Kirchplatz. Frühstück den ganzen Tag, '
       + 'mittags täglich wechselnde Gerichte aus der eigenen Küche, dazu Kuchen '
       + 'und Feingebäck aus der Backstube. Alles auch zum Mitnehmen.',
@@ -53,7 +53,7 @@ export const anreicherung = {
   },
 
   'lui-e-lei-oberkirch': {
-    beschreibung:
+    description:
       'Italienischer Feinkostladen mit Café am Kirchplatz, früher „dinunno". '
       + 'Eigener Kaffee, Antipasti mit frisch aufgeschnittenem Schinken, '
       + 'wechselnder Mittagstisch und Pasta. Im Laden Erzeugnisse kleiner '
@@ -70,7 +70,7 @@ export const anreicherung = {
   /* --- Rheinmünster ------------------------------------------------------ */
 
   'zitadelle': {
-    beschreibung:
+    description:
       'Kneipe und Sportsbar in Stollhofen, seit Langem eine feste Adresse im '
       + 'Ort. Sportübertragungen auf mehreren Schirmen und Leinwand, einmal im '
       + 'Monat Livemusik.',
@@ -84,7 +84,7 @@ export const anreicherung = {
   },
 
   'pizzeria-da-franco': {
-    beschreibung:
+    description:
       'Italiener in Stollhofen mit Pizza, Pasta und Salaten. Bei gutem Wetter '
       + 'ist der große Biergarten geöffnet.',
     serving: ['fleisch', 'vegetarisch', 'fisch', 'suesses'],
@@ -97,7 +97,7 @@ export const anreicherung = {
   /* --- Alcossebre -------------------------------------------------------- */
 
   'marimer': {
-    beschreibung:
+    description:
       'Direkt an der Strandpromenade, zusammengewachsen aus dem Strandlokal '
       + '„Mar" und dem Restaurant „Mer": vorne Tapas und einfache Gerichte, '
       + 'hinten unter Maulbeerbäumen gegrillter Fisch, Fleisch und Reisgerichte. '
@@ -111,7 +111,7 @@ export const anreicherung = {
   },
 
   'ca-batiste-restaurant': {
-    beschreibung:
+    description:
       'Restaurant am Passeig de Vista Alegre mit Blick aufs Meer und großer '
       + 'Terrasse. Mediterrane Küche mit Schwerpunkt auf Reisgerichten und '
       + 'Fisch, dazu Tapas, Salate und Fideuá.',
@@ -123,10 +123,17 @@ export const anreicherung = {
   },
 }
 
-/** Setzt die angereicherten Angaben auf einen importierten Betrieb. */
+/**
+ * Setzt die angereicherten Angaben auf einen importierten Betrieb.
+ *
+ * `verified` fliegt dabei heraus: Der Import schrieb es früher mit, aber es
+ * wird aus `claimStatus` berechnet (src/domain/derive.js). Ein gespeicherter
+ * Wert daneben würde irgendwann etwas anderes sagen als die Rechnung.
+ */
 export function anreichern(betrieb) {
-  const dazu = anreicherung[betrieb.slug]
-  if (!dazu) return betrieb
+  const { verified, ...basis } = betrieb
+  const dazu = anreicherung[basis.slug]
+  if (!dazu) return basis
   const { quelle, stand, ...felder } = dazu
-  return { ...betrieb, ...felder, quelleUrl: quelle, quelleStand: stand }
+  return { ...basis, ...felder, quelleUrl: quelle, quelleStand: stand }
 }
