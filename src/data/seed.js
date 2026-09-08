@@ -1,4 +1,5 @@
 import { betriebe as betriebeAusOsm } from './orte.js'
+import { anreichern } from './anreicherung.js'
 
 /**
  * Ausgangsdatenbestand.
@@ -38,7 +39,7 @@ const hm = (h, m = 0) => h * 60 + m
  * Einzigen mit Videos, Bewertungen und Speisekarten und zeigen deshalb, wie
  * die Anwendung mit Inhalt aussieht.
  */
-const echteOrte = () => betriebeAusOsm
+const echteOrte = () => betriebeAusOsm.map(anreichern)
 
 /* ==========================================================================
    Nutzer

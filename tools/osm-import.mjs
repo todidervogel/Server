@@ -261,6 +261,28 @@ const kategorieName = (k) => ({
   bar: 'Bar', baeckerei: 'Bäckerei', sonstiges: 'Sonstiges',
 }[k])
 
+/*
+ * Manche Betriebe tragen ihren Zustand im Namen: „Lempert (dauerhaft
+ * geschlossen)", „Café Stollhofen (vorrübergehend Gesschlossen)". In OSM ist
+ * das üblich, auf einer Betriebsseite sieht es nach einem Fehler aus — und die
+ * Anwendung hat für genau das ein Feld.
+ *
+ * Der Tippfehler „Gesschlossen" steht wirklich so in den Daten. Deshalb wird
+ * großzügig gesucht statt auf genaue Schreibweise gehofft.
+ */
+const ZUSATZ = /\s*[([]\s*[^)\]]*?(geschlossen|gesschlossen|closed|cerrado|permanentemente|dauerhaft|vorüber|vorrüber|renovier|umbau)[^)\]]*[)\]]\s*/i
+const DAUERHAFT = /dauerhaft|permanent|closed_permanently|cerrado permanentemente/i
+
+function nameUndZustand(roher) {
+  const treffer = ZUSATZ.exec(roher)
+  if (!treffer) return { name: roher.trim(), status: 'active' }
+  const name = roher.replace(ZUSATZ, ' ').replace(/\s+/g, ' ').trim()
+  return {
+    name: name || roher.trim(),
+    status: DAUERHAFT.test(treffer[0]) ? 'closed' : 'closed_reported',
+  }
+}
+
 function umbauen(element, gegend, vergeben) {
   const tags = element.tags ?? {}
   if (!tags.name) return null
@@ -272,8 +294,9 @@ function umbauen(element, gegend, vergeben) {
   const kuechenListe = kuechen(tags)
 
   const osmId = `${element.type}/${element.id}`
+  const { name, status } = nameUndZustand(tags.name)
 
-  let slug = kuerzel(tags.name)
+  let slug = kuerzel(name)
   if (!slug) return null
   if (vergeben.has(slug)) slug = `${slug}-${kuerzel(tags['addr:city'] ?? gegend.key)}`.slice(0, 70)
   if (vergeben.has(slug)) return null
@@ -282,7 +305,7 @@ function umbauen(element, gegend, vergeben) {
   return {
     id: `osm-${element.type[0]}${element.id}`,
     slug,
-    name: tags.name,
+    name,
     osmId,
     cuisine: kuechenListe[0] ?? kategorieName(kategorie),
     tags: kuechenListe.length ? kuechenListe : [kategorieName(kategorie)],
@@ -303,7 +326,7 @@ function umbauen(element, gegend, vergeben) {
     verified: false,
     claimStatus: 'unclaimed',
     claimedBy: null,
-    status: 'active',
+    status,
     hasCover: false,
   }
 }
